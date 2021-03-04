@@ -16,7 +16,7 @@ from pkg_resources import resource_filename
 from .utils import _parse_proto, _is_newer, _fix_imports, _generate_file
 
 
-__version__ = '0.0.0'
+__version__ = '0.1.0'
 
 
 INCLUDE = resource_filename('grpc_tools', '_proto')
