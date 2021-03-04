@@ -30,8 +30,10 @@ class Plugin(BasePlugin):
     defaults: t.Dict[str, t.Any] = {
         'build_dir': None,
         'server_listen': "[::]:50051",
-        'ssl_client': None,
-        'ssl_server': None,
+        'ssl_client': False,
+        'ssl_client_params': None,
+        'ssl_server': False,
+        'ssl_server_params': None,
         'default_channel': 'localhost:50051',
         'default_channel_options': {},
     }
@@ -80,7 +82,7 @@ class Plugin(BasePlugin):
             register(service_cls(), server)
         if self.cfg.ssl_server:
             server.add_secure_port(
-                self.cfg.server_listen, grpc.ssl_server_credentials(*self.cfg.ssl_server))
+                self.cfg.server_listen, grpc.ssl_server_credentials(*self.cfg.ssl_server_params))
 
         else:
             server.add_insecure_port(self.cfg.server_listen)
@@ -105,7 +107,7 @@ class Plugin(BasePlugin):
         if self.cfg.ssl_client:
             return grpc.aio.secure_channel(
                 target or self.cfg.default_channel,
-                grpc.ssl_channel_credentials(*self.cfg.ssl_client),
+                grpc.ssl_channel_credentials(*self.cfg.ssl_client_params or ()),
                 **(options or self.cfg.default_channel_options)
             )
 

@@ -158,8 +158,10 @@ Name                        Default value                           Desctiption
 --------------------------- --------------------------------------- ---------------------------
 **build_dir**               ``None``                                A directory to build proto files
 **server_listen**           ``"[::]:50051"``                        Server address
-**ssl_server**              ``None``                                SSL Server Credentials
-**ssl_client**              ``None``                                SSL Client Credentials
+**ssl_server**              ``False``                               Enable SSL for server
+**ssl_server_params**       ``None``                                SSL Server Params
+**ssl_client**              ``False``                               Enable SSL for client
+**ssl_client_params**       ``None``                                SSL Client Params
 **default_channel**         ``localhost:50051``                     Default Client Channel Address
 **default_channel_options** ``{}``                                  GRPC options for the default channel
 =========================== ======================================= =========================== 
