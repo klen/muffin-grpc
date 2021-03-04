@@ -82,7 +82,7 @@ Lets build a simple helloworld service, with the proto: ::
         string message = 1;
     }
 
-Put it somewhere and add the file in the grpc plugin:
+Put it somewhere and add the file into the grpc plugin:
 
 .. code-block:: python
 
