@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "weather.proto";
+
+package weather;
+
+service WeatherService {
+    rpc GetCurrent (WeatherRequest) returns (WeatherResponse);
+}
