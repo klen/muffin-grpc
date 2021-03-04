@@ -120,12 +120,15 @@ class Plugin(BasePlugin):
         targets = []
         args = []
         path = Path(path)
+        if not path.exists():
+            return []
+
         proto_updated = path.stat().st_ctime
         build_dir = Path(build_dir or path.parent)
         package, services, imports_ = _parse_proto(path)
 
         imports: t.List[Path] = [t for name in imports_ for t in self.build_proto(
-            path.with_name(name), build_dir=build_dir)]
+            path.parent / name, build_dir=build_dir)]
 
         target_pb2 = build_dir / f"{ path.stem }_pb2.py"
         if not _is_newer(target_pb2, proto_updated):

@@ -1,3 +1,5 @@
 /_
 /todo.txt
 /*/proto/*.py
+/build
+/dist

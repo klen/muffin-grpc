@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 message WeatherRequest {
     City coordinates = 1;
 }
@@ -12,6 +14,7 @@ message WeatherResponse {
     Temperature temperature = 1;
     Wind wind = 2;
     Humidity humidity = 3;
+    google.protobuf.Timestamp time = 4;
 }
 
 message Temperature {

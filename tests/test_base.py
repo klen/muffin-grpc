@@ -19,6 +19,37 @@ async def clean_build():
         path.unlink()
 
 
+async def test_add_to_server(app):
+    from muffin_grpc import Plugin as GRPC
+
+    grpc = GRPC(
+        app, build_dir=BUILD_DIR, server_listen='[::]:4242', default_channel='localhost:4242')
+    grpc.add_proto(BUILD_DIR / 'src/helloworld.proto')
+
+    from tests.proto.helloworld import GreeterServicer, HelloReply, HelloRequest, GreeterStub
+
+    @grpc.add_to_server
+    class Greeter(GreeterServicer):
+
+        async def SayHello(self, request: HelloRequest,
+                           context: grpc_aio.ServicerContext) -> HelloReply:
+            return HelloReply(message=f"Hello, { request.name.title() }!")
+
+    assert grpc.services
+    assert grpc.server
+
+    server = asyncio.create_task(grpc.server.start())
+
+    try:
+        async with grpc.channel() as channel:
+            stub = GreeterStub(channel)
+            response = await stub.SayHello(HelloRequest(name='mike'), timeout=10)
+            assert response.message == 'Hello, Mike!'
+    finally:
+        server.cancel()
+        await server
+
+
 async def test_proto_build(app):
     from muffin_grpc import Plugin as GRPC
 
@@ -58,34 +89,3 @@ async def test_proto_with_dependencies(app):
     assert WeatherResponse
     assert WeatherService
     assert Temperature
-
-
-async def test_add_to_server(app):
-    from muffin_grpc import Plugin as GRPC
-
-    grpc = GRPC(
-        app, build_dir=BUILD_DIR, server_listen='[::]:4242', default_channel='localhost:4242')
-    grpc.add_proto(BUILD_DIR / 'src/helloworld.proto')
-
-    from tests.proto.helloworld import GreeterServicer, HelloReply, HelloRequest, GreeterStub
-
-    @grpc.add_to_server
-    class Greeter(GreeterServicer):
-
-        async def SayHello(self, request: HelloRequest,
-                           context: grpc_aio.ServicerContext) -> HelloReply:
-            return HelloReply(message=f"Hello, { request.name.title() }!")
-
-    assert grpc.services
-    assert grpc.server
-
-    server = asyncio.create_task(grpc.server.start())
-
-    try:
-        async with grpc.channel() as channel:
-            stub = GreeterStub(channel)
-            response = await stub.SayHello(HelloRequest(name='mike'), timeout=10)
-            assert response.message == 'Hello, Mike!'
-    finally:
-        server.cancel()
-        await server
