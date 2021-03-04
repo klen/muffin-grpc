@@ -16,7 +16,7 @@ def aiolib():
 @pytest.fixture(autouse=True)
 async def clean_build():
     for path in BUILD_DIR.glob('*.py'):
-        path.unlink(True)
+        path.unlink()
 
 
 async def test_proto_build(app):
