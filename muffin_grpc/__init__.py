@@ -10,7 +10,7 @@ from signal import SIGINT, SIGTERM
 import grpc
 from grpc_tools import protoc
 from muffin import Application
-from muffin.plugin import BasePlugin, PluginException
+from muffin.plugins import BasePlugin, PluginException
 from pkg_resources import resource_filename
 
 from .utils import _parse_proto, _is_newer, _fix_imports, _generate_file
