@@ -2,7 +2,6 @@
 import asyncio
 import time
 import typing as t
-from functools import cached_property
 from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
@@ -11,7 +10,13 @@ import grpc
 from grpc_tools import protoc
 from muffin import Application
 from muffin.plugins import BasePlugin, PluginException
-from pkg_resources import resource_filename
+from pkg_resources import resource_filename  # type: ignore
+
+# Support python 3.7
+try:
+    from functools import cached_property  # type: ignore
+except ImportError:
+    from cached_property import cached_property  # type: ignore
 
 from .utils import _parse_proto, _is_newer, _fix_imports, _generate_file
 
@@ -90,7 +95,7 @@ class Plugin(BasePlugin):
         return server
 
     def add_proto(self, path: t.Union[str, Path], build_dir: t.Union[str, Path] = None,
-                  build_package: t.Union[str, t.Literal[False]] = None):
+                  build_package: t.Union[str, bool] = None):
         """Register/build the given proto file."""
         path = Path(path).absolute()
         self.proto_files.append(path)
@@ -119,7 +124,7 @@ class Plugin(BasePlugin):
         )
 
     def build_proto(self, path: t.Union[str, Path], build_dir: t.Union[str, Path] = None,
-                    build_package: t.Union[str, t.Literal[False]] = None) -> t.List[Path]:
+                    build_package: t.Union[str, bool] = None) -> t.List[Path]:
         """Build the given proto."""
         targets = []
         args = []
