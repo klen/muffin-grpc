@@ -174,9 +174,9 @@ class Plugin(BasePlugin):
             if not _is_newer(target_grpc, proto_updated):
                 args.append(f"--grpc_python_out={ build_dir }")
 
+        timestamp = time.time()
         if args:
             self.logger.info("Build %r", targets)
-            timestamp = time.time()
 
             _generate_file(
                 build_dir / "__init__.py",
