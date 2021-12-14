@@ -6,11 +6,12 @@ from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
 
-import grpc
 from grpc_tools import protoc
 from muffin import Application
 from muffin.plugins import BasePlugin, PluginException
 from pkg_resources import resource_filename  # type: ignore
+
+import grpc
 
 # Support python 3.7
 try:
@@ -194,10 +195,10 @@ class Plugin(BasePlugin):
             # Fix imports
             _fix_imports(*targets)
 
-        if build_package:
-            _generate_file(
-                build_dir / f"{ build_package }.py",
-                *[f"from .{target.stem} import *" for target in targets],
-            )
+            if build_package:
+                _generate_file(
+                    build_dir / f"{ build_package }.py",
+                    *[f"from .{target.stem} import *" for target in targets],
+                )
 
         return targets
