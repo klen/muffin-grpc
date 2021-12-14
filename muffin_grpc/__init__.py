@@ -1,16 +1,18 @@
 """Support GRPC for Muffin Framework."""
 import asyncio
+import logging
 import time
 import typing as t
 from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
 
-import grpc
 from grpc_tools import protoc
 from muffin import Application
 from muffin.plugins import BasePlugin, PluginException
 from pkg_resources import resource_filename  # type: ignore
+
+import grpc
 
 # Support python 3.7
 try:
@@ -18,30 +20,30 @@ try:
 except ImportError:
     from cached_property import cached_property  # type: ignore
 
-from .utils import _parse_proto, _is_newer, _fix_imports, _generate_file
+from .utils import _fix_imports, _generate_file, _is_newer, _parse_proto
+
+__version__ = "0.3.0"
 
 
-__version__ = '0.3.0'
-
-
-INCLUDE = resource_filename('grpc_tools', '_proto')
+INCLUDE = resource_filename("grpc_tools", "_proto")
 
 
 class Plugin(BasePlugin):
 
     """Start server, register endpoints, connect to channels."""
 
-    name = 'grpc'
+    name = "grpc"
     defaults: t.Dict[str, t.Any] = {
-        'build_dir': None,
-        'server_listen': "[::]:50051",
-        'ssl_client': False,
-        'ssl_client_params': None,
-        'ssl_server': False,
-        'ssl_server_params': None,
-        'default_channel': 'localhost:50051',
-        'default_channel_options': {},
+        "build_dir": None,
+        "server_listen": "[::]:50051",
+        "ssl_client": False,
+        "ssl_client_params": None,
+        "ssl_server": False,
+        "ssl_server_params": None,
+        "default_channel": "localhost:50051",
+        "default_channel_options": {},
     }
+    logger = logging.getLogger("muffin-grpc")
 
     def __init__(self, *args, **kwargs):
         """Initialize the plugin."""
@@ -52,11 +54,12 @@ class Plugin(BasePlugin):
     def setup(self, app: Application, **options):
         """Setup grpc commands."""
         super(Plugin, self).setup(app, **options)
+        self.logger = app.logger
 
         @app.manage(lifespan=True)
         async def grpc_server():
             """Start GRPC server with the registered endpoints."""
-            app.logger.warning('Start GRPC Server')
+            self.logger.warning("Start GRPC Server")
             self.server.add_insecure_port(self.cfg.server_listen)
             await self.server.start()
             loop = asyncio.get_event_loop()
@@ -70,7 +73,7 @@ class Plugin(BasePlugin):
         async def grpc_build():
             """Build registered proto files."""
             for path in self.proto_files:
-                self.app.logger.warning(f"Build: {path}")
+                self.logger.warning(f"Build: {path}")
                 self.build_proto(path, build_dir=self.cfg.build_dir)
 
         # TODO: Proto specs
@@ -87,20 +90,27 @@ class Plugin(BasePlugin):
             register(service_cls(), server)
         if self.cfg.ssl_server:
             server.add_secure_port(
-                self.cfg.server_listen, grpc.ssl_server_credentials(*self.cfg.ssl_server_params))
+                self.cfg.server_listen,
+                grpc.ssl_server_credentials(*self.cfg.ssl_server_params),
+            )
 
         else:
             server.add_insecure_port(self.cfg.server_listen)
 
         return server
 
-    def add_proto(self, path: t.Union[str, Path], build_dir: t.Union[str, Path] = None,
-                  build_package: t.Union[str, bool] = None):
+    def add_proto(
+        self,
+        path: t.Union[str, Path],
+        build_dir: t.Union[str, Path] = None,
+        build_package: t.Union[str, bool] = None,
+    ):
         """Register/build the given proto file."""
         path = Path(path).absolute()
         self.proto_files.append(path)
         self.build_proto(
-            path, build_dir=build_dir or self.cfg.build_dir, build_package=build_package)
+            path, build_dir=build_dir or self.cfg.build_dir, build_package=build_package
+        )
 
     def add_to_server(self, service_cls):
         """Register the given service class to the server."""
@@ -115,65 +125,90 @@ class Plugin(BasePlugin):
             return grpc.aio.secure_channel(
                 target or self.cfg.default_channel,
                 grpc.ssl_channel_credentials(*self.cfg.ssl_client_params or ()),
-                **(options or self.cfg.default_channel_options)
+                **(options or self.cfg.default_channel_options),
             )
 
         return grpc.aio.insecure_channel(
             target=target or self.cfg.default_channel,
-            **(options or self.cfg.default_channel_options)
+            **(options or self.cfg.default_channel_options),
         )
 
-    def build_proto(self, path: t.Union[str, Path], build_dir: t.Union[str, Path] = None,
-                    build_package: t.Union[str, bool] = None) -> t.List[Path]:
+    def build_proto(
+        self,
+        path: t.Union[str, Path],
+        build_dir: t.Union[str, Path] = None,
+        build_package: t.Union[str, bool] = None,
+    ) -> t.List[Path]:
         """Build the given proto."""
-        targets = []
         args = []
+        targets = []
         path = Path(path)
         if not path.exists():
             return []
 
         proto_updated = path.stat().st_ctime
         build_dir = Path(build_dir or path.parent)
+        if not build_dir.exists():
+            build_dir.mkdir()
+
         package, services, imports_ = _parse_proto(path)
         if build_package is None:
             build_package = package
 
-        imports: t.List[Path] = [t for name in imports_ for t in self.build_proto(
-            path.parent / name, build_dir=build_dir)]
+        imports: t.List[Path] = [
+            target
+            for name in imports_
+            for target in self.build_proto(
+                path.parent / name, build_dir=build_dir / Path(name).parent
+            )
+        ]
 
         target_pb2 = build_dir / f"{ path.stem }_pb2.py"
+        targets.append(target_pb2)
         if not _is_newer(target_pb2, proto_updated):
-            targets.append(target_pb2)
             args.append(f"--python_out={ build_dir }")
 
         if services:
             target_grpc = build_dir / f"{ path.stem }_pb2_grpc.py"
+            targets.append(target_grpc)
             if not _is_newer(target_grpc, proto_updated):
-                targets.append(target_grpc)
                 args.append(f"--grpc_python_out={ build_dir }")
 
-        if not targets:
-            return []
+        if args:
+            self.logger.info("Build %r", targets)
+            timestamp = time.time()
 
-        timestamp = time.time()
+            _generate_file(
+                build_dir / "__init__.py",
+                f"# {timestamp:.0f}: Generated by the Muffin GRPC Plugin",
+            )
 
-        _generate_file(
-            build_dir / '__init__.py', f"# {timestamp:.0f}: Generated by the Muffin GRPC Plugin")
+            args = [
+                "grpc_tools.protoc",
+                f"--proto_path={ path.parent }",
+                f"--proto_path={ INCLUDE }",
+                *args,
+                str(path),
+            ]
+            res = protoc.main(args)
+            if res != 0:
+                raise PluginException("{} failed".format(" ".join(args)))
 
-        args = ["grpc_tools.protoc", f"--proto_path={ path.parent }", f"--proto_path={ INCLUDE }",
-                *args, str(path)]
-        res = protoc.main(args)
-        if res != 0:
-            raise PluginException('{} failed'.format(" ".join(args)))
-
-        # Fix imports
-        _fix_imports(*targets)
+            # Fix imports
+            _fix_imports(*targets)
 
         if build_package:
-            _generate_file(build_dir / f"{ build_package }.py", *[
-                f"# {timestamp:.0f}: Generated by the Muffin GRPC Plugin\n",
-                *[f"from .{target.stem} import *" for target in imports],
-                *[f"from .{ target.stem } import *" for target in targets]
-            ])
+            imports = [imp.relative_to(build_dir) for imp in imports]
+            imports_ = [
+                f"{'.'.join(imp.parts[:-1])}.{imp.stem}".strip(".") for imp in imports
+            ]
+            _generate_file(
+                build_dir / f"{ build_package }.py",
+                *[
+                    f"# {timestamp:.0f}: Generated by the Muffin GRPC Plugin\n",
+                    *[f"from .{imp} import *" for imp in imports_],
+                    *[f"from .{target.stem} import *" for target in targets],
+                ],
+            )
 
         return targets

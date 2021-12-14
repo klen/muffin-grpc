@@ -4,18 +4,19 @@ import re
 import typing as t
 from pathlib import Path
 
-from .proto3 import proto as parser, Service, Import, Package
+from .proto3 import Import, Package, Service
+from .proto3 import proto as parser
 
-
-RE_PROTO_COMMENT = re.compile(r'//.*?\n+', re.S)
-RE_IMPORT_PB2 = re.compile(r'^import (\S+)_pb2', re.MULTILINE)
+RE_PROTO_COMMENT = re.compile(r"//.*?\n+", re.S)
+RE_IMPORT_PB2 = re.compile(r"^import (\S+)_pb2", re.MULTILINE)
+RE_PACKAGE_IMPORT_PB2 = re.compile(r"^from (\S+) import (\S+)_pb2", re.MULTILINE)
 
 
 def _parse_proto(proto: Path) -> t.Tuple[t.Optional[str], t.List[str], t.List[str]]:
     package = None
     services = []
     imports = []
-    for st in parser.parse(RE_PROTO_COMMENT.sub('', proto.read_text())).statements:
+    for st in parser.parse(RE_PROTO_COMMENT.sub("", proto.read_text())).statements:
         if isinstance(st, Service):
             services.append(st.name)
 
@@ -34,8 +35,11 @@ def _is_newer(target: Path, ts: float) -> bool:
 
 def _fix_imports(*targets: Path):
     for target in targets:
-        content = RE_IMPORT_PB2.sub(r'from . import \1_pb2', target.read_text())
-        target.write_text(content)
+        text = target.read_text()
+        text = RE_PACKAGE_IMPORT_PB2.sub(r"from .\1 import \2_pb2", text)
+        text = RE_IMPORT_PB2.sub(r"from . import \1_pb2", text)
+        text = text.replace("from .google.protobuf", "from google.protobuf")
+        target.write_text(text)
 
 
 def _generate_file(target: Path, *lines: t.Union[str, bool]):
