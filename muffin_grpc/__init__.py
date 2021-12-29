@@ -33,14 +33,15 @@ class Plugin(BasePlugin):
 
     name = "grpc"
     defaults: t.Dict[str, t.Any] = {
+        "autobuild": True,
         "build_dir": None,
+        "default_channel": "localhost:50051",
+        "default_channel_options": {},
         "server_listen": "[::]:50051",
         "ssl_client": False,
         "ssl_client_params": None,
         "ssl_server": False,
         "ssl_server_params": None,
-        "default_channel": "localhost:50051",
-        "default_channel_options": {},
     }
     logger = logging.getLogger("muffin-grpc")
 
@@ -108,10 +109,11 @@ class Plugin(BasePlugin):
         """Register/build the given proto file."""
         path = Path(path).absolute()
         self.proto_files.append(path)
-        build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
-        return self.build_proto(
-            path, build_dir=build_dir, build_package=build_package, targets=targets
-        )
+        if self.cfg.autobuild:
+            build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
+            return self.build_proto(
+                path, build_dir=build_dir, build_package=build_package, targets=targets
+            )
 
     def add_to_server(self, service_cls):
         """Register the given service class to the server."""

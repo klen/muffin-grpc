@@ -30,6 +30,12 @@ def app():
 async def test_proto_build(app):
     from muffin_grpc import Plugin as GRPC
 
+    grpc = GRPC(app, autobuild=False, build_dir=BUILD_DIR)
+    grpc.add_proto(SRC_DIR / "helloworld.proto", build_package="helloworld")
+
+    assert not (BUILD_DIR / "helloworld_pb2.py").is_file()
+    assert not (BUILD_DIR / "helloworld_pb2_grpc.py").is_file()
+
     grpc = GRPC(app, build_dir=BUILD_DIR)
     grpc.add_proto(SRC_DIR / "helloworld.proto", build_package="helloworld")
 
