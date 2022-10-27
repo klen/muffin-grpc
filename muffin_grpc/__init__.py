@@ -72,9 +72,9 @@ class Plugin(BasePlugin):
         @app.manage
         async def grpc_build():
             """Build registered proto files."""
-            for path in self.proto_files:
+            for path, build_dir in self.proto_files:
                 self.logger.warning(f"Build: {path}")
-                self.build_proto(path, build_dir=self.cfg.build_dir)
+                self.build_proto(path, build_dir=build_dir)
 
         # TODO: Proto specs
         # -----------------
@@ -108,9 +108,9 @@ class Plugin(BasePlugin):
     ):
         """Register/build the given proto file."""
         path = Path(path).absolute()
-        self.proto_files.append(path)
+        build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
+        self.proto_files.append((path, build_dir))
         if self.cfg.autobuild:
-            build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
             return self.build_proto(
                 path, build_dir=build_dir, build_package=build_package, targets=targets
             )
