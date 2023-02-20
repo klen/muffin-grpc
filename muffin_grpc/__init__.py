@@ -1,10 +1,10 @@
 """Support GRPC for Muffin Framework."""
 import asyncio
 import logging
-import typing as t
 from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
+from typing import List, Optional, Union
 
 from grpc_tools import protoc
 from muffin import Application
@@ -13,11 +13,11 @@ from pkg_resources import resource_filename  # type: ignore
 
 import grpc
 
-# Support python 3.7
+# Support py37
 try:
-    from functools import cached_property  # type: ignore
+    from cached_property import cached_property  # noqa
 except ImportError:
-    from cached_property import cached_property  # type: ignore
+    from functools import cached_property
 
 from .utils import _fix_imports, _generate_file, _is_newer, _parse_proto
 
@@ -32,7 +32,7 @@ class Plugin(BasePlugin):
     """Start server, register endpoints, connect to channels."""
 
     name = "grpc"
-    defaults: t.Dict[str, t.Any] = {
+    defaults = {
         "autobuild": True,
         "build_dir": None,
         "default_channel": "localhost:50051",
@@ -101,10 +101,10 @@ class Plugin(BasePlugin):
 
     def add_proto(
         self,
-        path: t.Union[str, Path],
-        build_dir: t.Union[str, Path] = None,
-        build_package: str = None,
-        targets: t.List[Path] = None,
+        path: Union[str, Path],
+        build_dir: Optional[Union[str, Path]] = None,
+        build_package: Optional[str] = None,
+        targets: Optional[List[Path]] = None,
     ):
         """Register/build the given proto file."""
         path = Path(path).absolute()
@@ -122,7 +122,7 @@ class Plugin(BasePlugin):
         register = getattr(proto_module, f"add_{ proto_cls.__name__ }_to_server")
         self.services.append((service_cls, register))
 
-    def channel(self, target: str = None, **options):
+    def channel(self, target: Optional[str] = None, **options):
         """Open a channel."""
         if self.cfg.ssl_client:
             return grpc.aio.secure_channel(
@@ -138,11 +138,11 @@ class Plugin(BasePlugin):
 
     def build_proto(
         self,
-        path: t.Union[str, Path],
-        build_dir: t.Union[str, Path] = None,
-        build_package: t.Union[str, bool] = None,
-        targets: t.List[Path] = None,
-    ) -> t.List[Path]:
+        path: Union[str, Path],
+        build_dir: Optional[Union[str, Path]] = None,
+        build_package: Optional[Union[str, bool]] = None,
+        targets: Optional[List[Path]] = None,
+    ) -> List[Path]:
         """Build the given proto."""
         path = Path(path)
         if not path.exists():
