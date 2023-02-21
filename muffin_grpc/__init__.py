@@ -21,7 +21,7 @@ except ImportError:
 
 from .utils import _fix_imports, _generate_file, _is_newer, _parse_proto
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 
 INCLUDE = resource_filename("grpc_tools", "_proto")
