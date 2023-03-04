@@ -1,28 +1,21 @@
 """Support GRPC for Muffin Framework."""
 import asyncio
 import logging
+from functools import cached_property
 from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
-from typing import List, Optional, Union
-
-from grpc_tools import protoc
-from muffin import Application
-from muffin.plugins import BasePlugin, PluginException
-from pkg_resources import resource_filename  # type: ignore
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import grpc
-
-# Support py37
-try:
-    from cached_property import cached_property  # noqa
-except ImportError:
-    from functools import cached_property
+from grpc_tools import protoc
+from muffin.plugins import BasePlugin, PluginError
+from pkg_resources import resource_filename
 
 from .utils import _fix_imports, _generate_file, _is_newer, _parse_proto
 
-__version__ = "0.4.1"
-
+if TYPE_CHECKING:
+    from muffin import Application
 
 INCLUDE = resource_filename("grpc_tools", "_proto")
 
@@ -51,7 +44,7 @@ class Plugin(BasePlugin):
         self.proto_files = []
         self.services = []
 
-    def setup(self, app: Application, **options):
+    def setup(self, app: "Application", **options):
         """Setup grpc commands."""
         super(Plugin, self).setup(app, **options)
         self.logger = app.logger
@@ -73,7 +66,7 @@ class Plugin(BasePlugin):
         async def grpc_build():
             """Build registered proto files."""
             for path, build_dir in self.proto_files:
-                self.logger.warning(f"Build: {path}")
+                self.logger.warning("Build: %s", path)
                 self.build_proto(path, build_dir=build_dir)
 
         # TODO: Proto specs
@@ -112,7 +105,7 @@ class Plugin(BasePlugin):
         self.proto_files.append((path, build_dir))
         if self.cfg.autobuild:
             return self.build_proto(
-                path, build_dir=build_dir, build_package=build_package, targets=targets
+                path, build_dir=build_dir, build_package=build_package, targets=targets,
             )
 
     def add_to_server(self, service_cls):
@@ -162,7 +155,7 @@ class Plugin(BasePlugin):
             target
             for name in imports
             for target in self.build_proto(
-                path.parent / name, build_dir=build_dir / Path(name).parent
+                path.parent / name, build_dir=build_dir / Path(name).parent,
             )
         ]
 
@@ -192,7 +185,7 @@ class Plugin(BasePlugin):
             ]
             res = protoc.main(args)
             if res != 0:
-                raise PluginException("{} failed".format(" ".join(args)))
+                raise PluginError("{} failed".format(" ".join(args)))
 
             # Fix imports
             _fix_imports(*targets)

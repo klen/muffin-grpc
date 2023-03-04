@@ -5,7 +5,6 @@ import enum as stdlib_enum
 from string import ascii_letters, digits, hexdigits, octdigits
 
 import attr
-
 from parsy import char_from, from_enum, generate, regex, seq, string
 
 # This file follows the spec at
@@ -45,7 +44,7 @@ def lexeme(p):
     """
     if isinstance(p, str):
         p = string(p)
-    return regex(r'\s*') >> p << regex(r'\s*')
+    return regex(r"\s*") >> p << regex(r"\s*")
 
 
 def is_present(p):
@@ -53,7 +52,7 @@ def is_present(p):
     Given a parser or string, make a parser that returns
     True if the parser matches, False otherwise
     """
-    return lexeme(p).optional().map(lambda v: False if v is None else True)
+    return lexeme(p).optional().map(lambda v: v is not None)
 
 
 # Our data structures
@@ -216,44 +215,44 @@ hexDigit = char_from(hexdigits)
 
 # Compared to spec, we add some '_' prefixed items which are not wrapped in `lexeme`,
 # on the assumption that spaces in the middle of identifiers are not accepted.
-_ident = (letter + (letter | decimalDigit | string("_")).many().concat()).desc('ident')
+_ident = (letter + (letter | decimalDigit | string("_")).many().concat()).desc("ident")
 ident = lexeme(_ident)
-fullIdent = lexeme(ident + (string(".") + ident).many().concat()).desc('fullIdent')
+fullIdent = lexeme(ident + (string(".") + ident).many().concat()).desc("fullIdent")
 _messageName = _ident
-messageName = lexeme(ident).desc('messageName')
+messageName = lexeme(ident).desc("messageName")
 _enumName = ident
-enumName = lexeme(_enumName).desc('enumName')
-fieldName = ident.desc('fieldName')
-oneofName = ident.desc('oneofName')
-mapName = ident.desc('mapName')
-serviceName = ident.desc('serviceName')
-rpcName = ident.desc('rpcName')
+enumName = lexeme(_enumName).desc("enumName")
+fieldName = ident.desc("fieldName")
+oneofName = ident.desc("oneofName")
+mapName = ident.desc("mapName")
+serviceName = ident.desc("serviceName")
+rpcName = ident.desc("rpcName")
 messageType = optional_string(".") + (_ident + string(".")).many().concat() + _messageName
 enumType = optional_string(".") + (_ident + string(".")).many().concat() + _enumName
 
 # Integer literals
-decimalLit = regex("[1-9][0-9]*").desc('decimalLit').map(convert_decimal)
-octalLit = regex("0[0-7]*").desc('octalLit').map(convert_octal)
-hexLit = regex("0[x|X][0-9a-fA-F]+").desc('octalLit').map(convert_hex)
+decimalLit = regex("[1-9][0-9]*").desc("decimalLit").map(convert_decimal)
+octalLit = regex("0[0-7]*").desc("octalLit").map(convert_octal)
+hexLit = regex("0[x|X][0-9a-fA-F]+").desc("octalLit").map(convert_hex)
 intLit = decimalLit | octalLit | hexLit
 
 
 # Floating-point literals
-decimals = r'[0-9]+'
-exponent = r'[e|E][+|-]?' + decimals
+decimals = r"[0-9]+"
+exponent = r"[e|E][+|-]?" + decimals
 floatLit = regex(
-    r'({decimals}\.({decimals})?({exponent})?)|{decimals}{exponent}|\.{decimals}({exponent})?' .format(
+    r"({decimals}\.({decimals})?({exponent})?)|{decimals}{exponent}|\.{decimals}({exponent})?" .format(
         decimals=decimals,
-        exponent=exponent)).desc('floatLit').map(float)
+        exponent=exponent)).desc("floatLit").map(float)
 
 
 # Boolean
-boolLit = (string("true").result(True) | string("false").result(False)).desc('boolLit')
+boolLit = (string("true").result(True) | string("false").result(False)).desc("boolLit")
 
 
 # String literals
 hexEscape = regex(r"\\[x|X]") >> regex("[0-9a-fA-F]{2}").map(convert_hex).map(chr)
-octEscape = regex(r"\\") >> regex('[0-7]{2}').map(convert_octal).map(chr)
+octEscape = regex(r"\\") >> regex("[0-7]{2}").map(convert_octal).map(chr)
 charEscape = regex(r"\\") >> (
     string("a").result("\a") |
     string("b").result("\b") |
@@ -269,7 +268,7 @@ charEscape = regex(r"\\") >> (
 escapes = hexEscape | octEscape | charEscape
 # Correction to spec regarding " and ' inside quoted strings
 strLit = (string("'") >> (escapes | regex(r"[^\0\n\'\\]")).many().concat() << string("'") |
-          string('"') >> (escapes | regex(r"[^\0\n\"\\]")).many().concat() << string('"')).desc('strLit')
+          string('"') >> (escapes | regex(r"[^\0\n\"\\]")).many().concat() << string('"')).desc("strLit")
 quote = string("'") | string('"')
 
 # EmptyStatement
@@ -297,83 +296,83 @@ syntax = lexeme("syntax") >> EQ >> quote >> string("proto3") << quote + SEMI
 # Import Statement
 import_option = from_enum(ImportOption)
 
-import_ = seq(lexeme("import") >> import_option.optional().tag('option'),
-              lexeme(strLit).tag('identifier') << SEMI).combine_dict(Import)
+import_ = seq(lexeme("import") >> import_option.optional().tag("option"),
+              lexeme(strLit).tag("identifier") << SEMI).combine_dict(Import)
 
 # Package
 package = seq(lexeme("package") >> fullIdent << SEMI).map(Package)
 
 # Option
 optionName = (ident | (LPAREN >> fullIdent << RPAREN)) + (string(".") + ident).many().concat()
-option = seq(lexeme("option") >> optionName.tag('name'),
-             EQ >> constant.tag('value') << SEMI,
+option = seq(lexeme("option") >> optionName.tag("name"),
+             EQ >> constant.tag("value") << SEMI,
              ).combine_dict(Option)
 
 # Normal field
 type_ = lexeme(from_enum(Type) | messageType | enumType)
 fieldNumber = lexeme(intLit)
 
-fieldOption = seq(optionName.tag('name'),
-                  EQ >> constant.tag('value')).combine_dict(Option)
+fieldOption = seq(optionName.tag("name"),
+                  EQ >> constant.tag("value")).combine_dict(Option)
 fieldOptions = fieldOption.sep_by(lexeme(","), min=1)
 fieldOptionList = (lexeme("[") >> fieldOptions << lexeme("]")).optional().map(
     lambda o: [] if o is None else o)
 
-field = seq(is_present("repeated").tag('repeated'),
-            type_.tag('type'),
-            fieldName.tag('name') << EQ,
-            fieldNumber.tag('number'),
-            fieldOptionList.tag('options') << SEMI,
+field = seq(is_present("repeated").tag("repeated"),
+            type_.tag("type"),
+            fieldName.tag("name") << EQ,
+            fieldNumber.tag("number"),
+            fieldOptionList.tag("options") << SEMI,
             ).combine_dict(Field)
 
 
 # Oneof and oneof field
-oneofField = seq(type_.tag('type'),
-                 fieldName.tag('name') << EQ,
-                 fieldNumber.tag('number'),
-                 fieldOptionList.tag('options') << SEMI,
+oneofField = seq(type_.tag("type"),
+                 fieldName.tag("name") << EQ,
+                 fieldNumber.tag("number"),
+                 fieldOptionList.tag("options") << SEMI,
                  ).combine_dict(OneOfField)
-oneof = seq(lexeme("oneof") >> oneofName.tag('name'),
+oneof = seq(lexeme("oneof") >> oneofName.tag("name"),
             LBRACE >>
-            (oneofField | emptyStatement).many().map(exclude_none).tag('fields') <<
-            RBRACE
+            (oneofField | emptyStatement).many().map(exclude_none).tag("fields") <<
+            RBRACE,
             ).combine_dict(OneOf)
 
 # Map field
 keyType = lexeme(from_enum(KeyType))
-mapField = seq(lexeme("map") >> lexeme("<") >> keyType.tag('key_type'),
-               lexeme(",") >> type_.tag('type'),
-               lexeme(">") >> mapName.tag('name'),
-               EQ >> fieldNumber.tag('number'),
-               fieldOptionList.tag('options') << SEMI
+mapField = seq(lexeme("map") >> lexeme("<") >> keyType.tag("key_type"),
+               lexeme(",") >> type_.tag("type"),
+               lexeme(">") >> mapName.tag("name"),
+               EQ >> fieldNumber.tag("number"),
+               fieldOptionList.tag("options") << SEMI,
                ).combine_dict(Map)
 
 # Reserved
-range_ = seq(lexeme(intLit).tag('from_'),
-             (lexeme("to") >> (intLit | lexeme("max"))).optional().tag('to')
+range_ = seq(lexeme(intLit).tag("from_"),
+             (lexeme("to") >> (intLit | lexeme("max"))).optional().tag("to"),
              ).combine_dict(Range)
 ranges = range_.sep_by(lexeme(","), min=1)
 # The spec for 'reserved' indicates 'fieldName' here, which is never a quoted string.
 # But the example has a quoted string. We have changed it to 'strLit'
 fieldNames = strLit.sep_by(lexeme(","), min=1)
-reserved = seq(lexeme("reserved") >> (ranges | fieldNames) << SEMI
+reserved = seq(lexeme("reserved") >> (ranges | fieldNames) << SEMI,
                ).combine(Reserved)
 
 # Enum definition
-enumValueOption = seq(optionName.tag('name') << EQ,
-                      constant.tag('value')
+enumValueOption = seq(optionName.tag("name") << EQ,
+                      constant.tag("value"),
                       ).combine_dict(Option)
-enumField = seq(ident.tag('name') << EQ,
-                lexeme(intLit).tag('value'),
+enumField = seq(ident.tag("name") << EQ,
+                lexeme(intLit).tag("value"),
                 (lexeme("[") >> enumValueOption.sep_by(lexeme(","), min=1) << lexeme("]")).optional()
-                .map(lambda o: [] if o is None else o).tag('options') <<
-                SEMI
+                .map(lambda o: [] if o is None else o).tag("options") <<
+                SEMI,
                 ).combine_dict(EnumField)
 enumBody = (LBRACE >>
             (option | enumField | emptyStatement).many().map(exclude_none) <<
             RBRACE)
-enum = seq(lexeme("enum") >> enumName.tag('name'),
-           enumBody.tag('body')
+enum = seq(lexeme("enum") >> enumName.tag("name"),
+           enumBody.tag("body"),
            ).combine_dict(Enum)
 
 
@@ -393,7 +392,7 @@ messageBody = (LBRACE >>
 
 
 # Service definition
-rpc = seq(lexeme("rpc") >> rpcName.tag('name'),
+rpc = seq(lexeme("rpc") >> rpcName.tag("name"),
           LPAREN >>
           (is_present("stream").tag("request_stream")),
           messageType.tag("request_message_type") << RPAREN,
@@ -405,19 +404,21 @@ rpc = seq(lexeme("rpc") >> rpcName.tag('name'),
            (option | emptyStatement).many() <<
             RBRACE) |
            SEMI.result([])
-           ).optional().map(exclude_none).tag('options')
+           ).optional().map(exclude_none).tag("options"),
           ).combine_dict(Rpc)
 
-service = seq(lexeme("service") >> serviceName.tag('name'),
+service = seq(lexeme("service") >> serviceName.tag("name"),
               LBRACE >>
-              (option | rpc | emptyStatement).many().map(exclude_none).tag('body') <<
-              RBRACE
+              (option | rpc | emptyStatement).many().map(exclude_none).tag("body") <<
+              RBRACE,
               ).combine_dict(Service)
 
 
 # Proto file
 topLevelDef = message | enum | service
-proto = seq(syntax.tag('syntax'),
+proto = seq(syntax.tag("syntax"),
             (import_ | package | option | topLevelDef | emptyStatement
-             ).many().map(exclude_none).tag('statements')
+             ).many().map(exclude_none).tag("statements"),
             ).combine_dict(Proto)
+
+# ruff: noqa
