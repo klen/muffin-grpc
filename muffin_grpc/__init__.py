@@ -115,6 +115,9 @@ class Plugin(BasePlugin):
                 targets=targets,
             )
 
+        else:
+            return [build_dir / f"{ path.stem }_pb2.py"]
+
     def add_to_server(self, service_cls):
         """Register the given service class to the server."""
         proto_cls = service_cls.mro()[-2]
