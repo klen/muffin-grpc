@@ -30,7 +30,7 @@ Features:
 Requirements
 =============
 
-- python >= 3.7
+- python >= 3.8
 
 .. note:: The plugin supports only asyncio evenloop (not trio)
 
@@ -153,7 +153,7 @@ from the server.
 Configuration options
 ----------------------
 
-=========================== ======================================= =========================== 
+=========================== ======================================= ===========================
 Name                        Default value                           Desctiption
 --------------------------- --------------------------------------- ---------------------------
 **build_dir**               ``None``                                A directory to build proto files
@@ -164,7 +164,7 @@ Name                        Default value                           Desctiption
 **ssl_client_params**       ``None``                                SSL Client Params
 **default_channel**         ``localhost:50051``                     Default Client Channel Address
 **default_channel_options** ``{}``                                  GRPC options for the default channel
-=========================== ======================================= =========================== 
+=========================== ======================================= ===========================
 
 You are able to provide the options when you are initiliazing the plugin:
 

@@ -5,7 +5,7 @@ from functools import cached_property
 from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import grpc
 from grpc_tools import protoc
@@ -41,7 +41,9 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         """Initialize the plugin."""
         super(Plugin, self).__init__(*args, **kwargs)
-        self.proto_files = []
+        self.proto_files: List[
+            Tuple[Union[str, Path], Optional[Union[str, Path]], Dict[str, Any]]
+        ] = []
         self.services = []
 
     def setup(self, app: "Application", **options):
@@ -65,9 +67,9 @@ class Plugin(BasePlugin):
         @app.manage
         async def grpc_build():
             """Build registered proto files."""
-            for path, build_dir in self.proto_files:
+            for path, build_dir, params in self.proto_files:
                 self.logger.warning("Build: %s", path)
-                self.build_proto(path, build_dir=build_dir)
+                self.build_proto(path, build_dir=build_dir, **params)
 
         # TODO: Proto specs
         # -----------------
@@ -102,10 +104,15 @@ class Plugin(BasePlugin):
         """Register/build the given proto file."""
         path = Path(path).absolute()
         build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
-        self.proto_files.append((path, build_dir))
+        self.proto_files.append(
+            (path, build_dir, {"build_package": build_package, "targets": targets}),
+        )
         if self.cfg.autobuild:
             return self.build_proto(
-                path, build_dir=build_dir, build_package=build_package, targets=targets,
+                path,
+                build_dir=build_dir,
+                build_package=build_package,
+                targets=targets,
             )
 
     def add_to_server(self, service_cls):
@@ -155,7 +162,8 @@ class Plugin(BasePlugin):
             target
             for name in imports
             for target in self.build_proto(
-                path.parent / name, build_dir=build_dir / Path(name).parent,
+                path.parent / name,
+                build_dir=build_dir / Path(name).parent,
             )
         ]
 

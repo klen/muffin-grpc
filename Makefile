@@ -1,75 +1,63 @@
 VIRTUAL_ENV ?= .venv
 
-all: $(VIRTUAL_ENV)
+# =============
+#  Development
+# =============
 
-.PHONY: help
-# target: help - Display callable targets
-help:
-	@egrep "^# target:" [Mm]akefile
+$(VIRTUAL_ENV): poetry.lock
+	@[ -d $(VIRTUAL_ENV) ] || python -m venv $(VIRTUAL_ENV)
+	@poetry install --with tests,dev
+	@poetry run pre-commit install --hook-type pre-push
+	@touch $(VIRTUAL_ENV)
 
-.PHONY: clean
-# target: clean - Display callable targets
-clean:
-	@rm -rf example/proto/*.py
-	@rm -rf tests/proto/*.py
-	@rm -rf build/ dist/ docs/_build *.egg-info
-	@find $(CURDIR) -name "*.py[co]" -delete
-	@find $(CURDIR) -name "*.orig" -delete
-	@find $(CURDIR)/$(MODULE) -name "__pycache__" | xargs rm -rf
+.PHONY: test t
+# target: test - Runs tests
+test t: $(VIRTUAL_ENV)
+	@poetry run pytest tests
+
+.PHONY: mypy
+mypy: $(VIRTUAL_ENV)
+	@poetry run mypy muffin_grpc
+
+.PHONY: example
+example: build $(VIRTUAL_ENV)
+	@poetry run uvicorn --reload example:app
+
+.PHONY: example-grpc
+example-grpc: $(VIRTUAL_ENV)
+	@poetry run muffin example:app --aiolib=asyncio grpc_server --build-proto
+
+.PHONY: build
+build: $(VIRTUAL_ENV) clean
+	@poetry run muffin example:app grpc_build
 
 # ==============
 #  Bump version
 # ==============
 
 .PHONY: release
-VERSION?=minor
+VPART ?= minor
 # target: release - Bump version
 release: $(VIRTUAL_ENV)
-	@$(VIRTUAL_ENV)/bin/bump2version $(VERSION)
-	@git checkout master
-	@git merge develop
 	@git checkout develop
-	@git push origin develop master
-	@git push --tags
+	@git pull
+	@git checkout master
+	@git pull
+	@git merge develop
+	@poetry version $(VERSION)
+	@git commit -am "Bump version: `poetry version -s`"
+	@git tag `poetry version -s`
+	@git checkout develop
+	@git merge master
+	@git push --follow-tags origin develop master
 
 .PHONY: minor
 minor: release
 
 .PHONY: patch
 patch:
-	make release VERSION=patch
+	make release VPART=patch
 
 .PHONY: major
 major:
-	make release VERSION=major
-
-# =============
-#  Development
-# =============
-
-$(VIRTUAL_ENV): pyproject.toml
-	@[ -d $(VIRTUAL_ENV) ] || python -m venv $(VIRTUAL_ENV)
-	@$(VIRTUAL_ENV)/bin/pip install -e .[tests,dev,example]
-	@$(VIRTUAL_ENV)/bin/pre-commit install --hook-type pre-push
-	@touch $(VIRTUAL_ENV)
-
-.PHONY: test t
-# target: test - Runs tests
-test t: $(VIRTUAL_ENV)
-	@$(VIRTUAL_ENV)/bin/pytest tests
-
-.PHONY: mypy
-mypy: $(VIRTUAL_ENV)
-	@$(VIRTUAL_ENV)/bin/mypy muffin_grpc
-
-.PHONY: example
-example: build $(VIRTUAL_ENV)
-	$(VIRTUAL_ENV)/bin/uvicorn --reload example:app
-
-.PHONY: example-grpc
-example-grpc: $(VIRTUAL_ENV)
-	$(VIRTUAL_ENV)/bin/muffin example:app --aiolib=asyncio grpc_server --build-proto
-
-.PHONY: build
-build: $(VIRTUAL_ENV) clean
-	$(VIRTUAL_ENV)/bin/muffin example:app grpc_build
+	make release VPART=major

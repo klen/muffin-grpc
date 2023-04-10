@@ -1,11 +1,12 @@
-[project]
+[tool.poetry]
 name = "muffin-grpc"
 version = "0.5.0"
 description = "GRPC support for Muffin framework."
 readme = "README.rst"
-requires-python = ">=3.8"
-license = {"text" = "MIT License"}
-authors = [{ name = "Kirill Klenov", email = "horneds@gmail.com" }]
+homepage = "https://github.com/klen/muffin-grpc"
+repository = "https://github.com/klen/muffin-grpc"
+authors = ["Kirill Klenov <horneds@gmail.com>"]
+license = "MIT"
 keywords = ["grpc", "muffin", "asyncio", "asgi", "web"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -19,33 +20,30 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Framework :: AsyncIO",
 ]
-dependencies = [
-  "muffin >= 0.92",
-  "grpcio >= 1.42",
-  "grpcio-tools >= 1.42",
-  "parsy",
+packages = [
+  { include = "muffin_grpc" },
 ]
 
-[project.urls]
-homepage = "https://github.com/klen/muffin-grpc"
-repository = "https://github.com/klen/muffin-grpc"
+[tool.poetry.dependencies]
+python = "^3.8"
+muffin = "^0"
+grpcio = "^1"
+grpcio-tools = "^1"
+parsy = "*"
 
-[project.optional-dependencies]
-tests = [
-  "pytest",
-  "pytest-aio",
-  "pytest-mypy",
-  "ruff",
-]
-dev = ["pre-commit", "refurb", "bump2version"]
-yaml = ["pyyaml"]
-example = ["uvicorn", "muffin-jinja2"]
+[tool.poetry.group.tests.dependencies]
+pytest = "*"
+pytest-aio = "*"
+pytest-mypy = "*"
+ruff = "*"
 
-[tool.setuptools]
-packages = ['muffin_grpc']
+[tool.poetry.group.dev.dependencies]
+pre-commit = "*"
+black = "*"
 
-[tool.setuptools.package-data]
-muffin_grpc = ["py.typed"]
+[tool.poetry.group.example.dependencies]
+uvicorn = "*"
+muffin-jinja2 = "*"
 
 [tool.pytest.ini_options]
 addopts = "-xsv"
@@ -80,3 +78,12 @@ target-version = "py38"
 exclude = [".venv", "docs", "examples"]
 select = ["ALL"]
 ignore = ["D", "UP", "ANN", "DJ", "EM", "RSE", "SLF", "RET", "S101", "PLR2004", "PLR0912", "N804", "A003", "TRY003"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311"]
+preview = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
