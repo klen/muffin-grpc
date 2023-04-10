@@ -44,7 +44,7 @@ release: $(VIRTUAL_ENV)
 	@git checkout master
 	@git pull
 	@git merge develop
-	@poetry version $(VERSION)
+	@poetry version $(VPART)
 	@git commit -am "Bump version: `poetry version -s`"
 	@git tag `poetry version -s`
 	@git checkout develop
