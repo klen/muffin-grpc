@@ -39,7 +39,7 @@ jobs:
       run: poetry run mypy
 
     - name: Test with pytest
-      run: poetry run pytest tests.py
+      run: poetry run pytest tests
 
   notify:
     runs-on: ubuntu-latest
