@@ -56,7 +56,7 @@ ujson = ["ujson"]
 name = "attrs"
 version = "22.2.0"
 description = "Classes Without Boilerplate"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -1228,4 +1228,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "94dff224060dd43f0b42e853e97af76a841953d22f06469d9be4427a46f66bd2"
+content-hash = "36cde382626b7d2d711db56fb2d03ef13d15c156b4c2c367153d171ada016457"
