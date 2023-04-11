@@ -30,6 +30,7 @@ muffin = "^0"
 grpcio = "^1"
 grpcio-tools = "^1"
 parsy = "*"
+attrs = "*"
 
 [tool.poetry.group.tests.dependencies]
 pytest = "*"
