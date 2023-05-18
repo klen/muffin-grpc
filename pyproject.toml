@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "muffin-grpc"
-version = "0.5.5"
+version = "0.6.0"
 description = "GRPC support for Muffin framework."
 readme = "README.rst"
 homepage = "https://github.com/klen/muffin-grpc"
