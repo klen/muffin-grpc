@@ -150,7 +150,7 @@ class Plugin(BasePlugin):
         build_dir: Optional[Union[str, Path]] = None,
         build_package: Optional[Union[str, bool]] = None,
         targets: Optional[List[Path]] = None,
-        include: list[Path] | None = None,
+        include: Optional[List[Path]] = None,
     ) -> List[Path]:
         """Build the given proto."""
         path = Path(path)
