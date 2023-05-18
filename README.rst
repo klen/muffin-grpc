@@ -135,7 +135,7 @@ The server is working and accepts GRPC request, let's start building a client
     async def index(request):
         name = request.url.query.get('name') or 'anonymous'
         try:
-            async with grpc.channel() as channel:
+            async with grpc.get_channel() as channel:
                 stub = GreeterStub(channel)
                 response = await stub.SayHello(
                     HelloRequest(name=request.url.query['name']), timeout=10)

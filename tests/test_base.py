@@ -1,9 +1,8 @@
 import asyncio
 from pathlib import Path
 
-import pytest
-
 import grpc.aio as grpc_aio
+import pytest
 
 BUILD_DIR = Path("tests/proto/compiled")
 SRC_DIR = Path("tests/proto/src")
@@ -20,7 +19,7 @@ async def clean_build():
         path.unlink()
 
 
-@pytest.fixture
+@pytest.fixture()
 def app():
     from muffin import Application
 
@@ -47,8 +46,12 @@ async def test_proto_build(app):
 
     assert grpc.proto_files
 
-    from tests.proto.compiled.helloworld import (GreeterServicer, GreeterStub, HelloReply,
-                                                 HelloRequest)
+    from tests.proto.compiled.helloworld import (  # type: ignore[]
+        GreeterServicer,
+        GreeterStub,
+        HelloReply,
+        HelloRequest,
+    )
 
     assert HelloReply
     assert HelloRequest
@@ -67,8 +70,12 @@ async def test_proto_build_with_dependencies(app):
     assert (BUILD_DIR / "weather_rpc_pb2_grpc.py").is_file()
     assert (BUILD_DIR / "weather_pb2.py").is_file()
 
-    from tests.proto.compiled.weather import (Temperature, WeatherRequest, WeatherResponse,
-                                              WeatherService)
+    from tests.proto.compiled.weather import (  # type: ignore[]
+        Temperature,
+        WeatherRequest,
+        WeatherResponse,
+        WeatherService,
+    )
 
     assert WeatherRequest
     assert WeatherResponse
@@ -87,8 +94,12 @@ async def test_add_to_server(app):
     )
     grpc.add_proto(BUILD_DIR / "src/helloworld.proto")
 
-    from tests.proto.compiled.helloworld import (GreeterServicer, GreeterStub, HelloReply,
-                                                 HelloRequest)
+    from tests.proto.compiled.helloworld import (  # type: ignore[]
+        GreeterServicer,
+        GreeterStub,
+        HelloReply,
+        HelloRequest,
+    )
 
     @grpc.add_to_server
     class Greeter(GreeterServicer):
@@ -103,7 +114,7 @@ async def test_add_to_server(app):
     server_task = asyncio.create_task(grpc.server.start())
 
     try:
-        async with grpc.channel() as channel:
+        async with grpc.get_channel() as channel:
             stub = GreeterStub(channel)
             response = await stub.SayHello(HelloRequest(name="mike"), timeout=10)
             assert response.message == "Hello, Mike!"

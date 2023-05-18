@@ -20,9 +20,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Framework :: AsyncIO",
 ]
-packages = [
-  { include = "muffin_grpc" },
-]
+packages = [{ include = "muffin_grpc" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -78,7 +76,23 @@ line-length = 100
 target-version = "py38"
 exclude = [".venv", "docs", "examples"]
 select = ["ALL"]
-ignore = ["D", "UP", "ANN", "DJ", "EM", "RSE", "SLF", "RET", "S101", "PLR2004", "PLR0912", "N804", "A003", "TRY003"]
+ignore = [
+  "ANN",
+  "COM",
+  "D",
+  "DJ",
+  "EM",
+  "UP",
+  "RSE",
+  "SLF",
+  "RET",
+  "S101",
+  "PLR2004",
+  "PLR0912",
+  "N804",
+  "A003",
+  "TRY003",
+]
 
 [tool.black]
 line-length = 100
