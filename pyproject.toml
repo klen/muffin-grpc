@@ -27,8 +27,8 @@ python = "^3.8"
 muffin = "^0"
 grpcio = "^1"
 grpcio-tools = "^1"
-parsy = "*"
 attrs = "*"
+proto-schema-parser = "*"
 
 [tool.poetry.group.tests.dependencies]
 pytest = "*"

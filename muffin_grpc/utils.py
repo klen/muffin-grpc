@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import re
 import time
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, Dict, Union
 
-from .proto3 import Import, Package, Service
-from .proto3 import proto as parser
+from proto_schema_parser.parser import Parser
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -16,21 +16,12 @@ RE_PROTO_COMMENT = re.compile(r"//.*?\n+", re.S)
 RE_IMPORT_PB2 = re.compile(r"^import (\S+)_pb2", re.MULTILINE)
 
 
-def _parse_proto(proto: Path) -> Tuple[Optional[str], List[str], List[str]]:
-    package = None
-    services = []
-    imports = []
-    for st in parser.parse(RE_PROTO_COMMENT.sub("", proto.read_text())).statements:
-        if isinstance(st, Service):
-            services.append(st.name)
+def _parse_proto(proto: Path) -> Dict[str, list[Any]]:
+    data = defaultdict(list)
+    for st in Parser().parse(proto.read_text()).file_elements:
+        data[type(st).__name__].append(st)
 
-        elif isinstance(st, Import):
-            imports.append(st.identifier)
-
-        elif isinstance(st, Package):
-            package = st.identifier[0]
-
-    return package, services, imports
+    return data
 
 
 def _is_newer(target: Path, ts: float) -> bool:

@@ -162,17 +162,19 @@ class Plugin(BasePlugin):
         if not build_dir.exists():
             build_dir.mkdir()
 
-        package, services, imports = _parse_proto(path)
-        if build_package is None:
-            build_package = package
+        data = _parse_proto(path)
+        packages = data.get("Package")
+        if build_package is None and packages:
+            build_package = data["Package"][-1].name
 
         targets = targets or []
+        imports = data.get("Import", [])
         targets = targets + [
             target
-            for name in imports
+            for imp in imports
             for target in self.build_proto(
-                path.parent / name,
-                build_dir=build_dir / Path(name).parent,
+                path.parent / imp.name,
+                build_dir=build_dir / Path(imp.name).parent,
             )
         ]
 
@@ -182,6 +184,7 @@ class Plugin(BasePlugin):
         if not _is_newer(target_pb2, proto_updated):
             args.append(f"--python_out={ build_dir }")
 
+        services = data.get("Service")
         if services:
             target_grpc = build_dir / f"{ path.stem }_pb2_grpc.py"
             targets.append(target_grpc)
@@ -215,3 +218,6 @@ class Plugin(BasePlugin):
                 )
 
         return targets
+
+
+GRPC = Plugin
