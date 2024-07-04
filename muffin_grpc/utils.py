@@ -12,7 +12,7 @@ from proto_schema_parser.parser import Parser
 if TYPE_CHECKING:
     from pathlib import Path
 
-RE_PROTO_COMMENT = re.compile(r"//.*?\n+", re.S)
+RE_PROTO_COMMENT = re.compile(r"//.*?\n+", re.DOTALL)
 RE_IMPORT_PB2 = re.compile(r"^import (\S+)_pb2", re.MULTILINE)
 
 

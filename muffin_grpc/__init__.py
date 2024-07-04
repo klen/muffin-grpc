@@ -1,4 +1,7 @@
 """Support GRPC for Muffin Framework."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 from contextlib import suppress
@@ -22,11 +25,10 @@ INCLUDE = resource_filename("grpc_tools", "_proto")
 
 
 class Plugin(BasePlugin):
-
     """Start server, register endpoints, connect to channels."""
 
     name = "grpc"
-    defaults = {
+    defaults = {  # noqa: RUF012
         "autobuild": True,
         "build_dir": None,
         "default_channel": "localhost:50051",
@@ -72,12 +74,6 @@ class Plugin(BasePlugin):
             for path, build_dir, params in self.proto_files:
                 self.logger.warning("Build: %s", path)
                 self.build_proto(path, build_dir=build_dir, **params)
-
-        # TODO: Proto specs
-        # -----------------
-        #  @app.route('proto/specs')
-        #  async def proto_specs(request):
-        #      pass
 
     async def startup(self):
         with suppress(PluginError):

@@ -33,7 +33,7 @@ jobs:
       run: poetry install --with tests
 
     - name: Check code
-      run: poetry run ruff muffin_grpc
+      run: poetry run ruff check muffin_grpc
 
     - name: Check typing
       run: poetry run mypy
