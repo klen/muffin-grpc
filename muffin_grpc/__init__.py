@@ -9,7 +9,7 @@ from functools import cached_property
 from importlib import import_module
 from pathlib import Path
 from signal import SIGINT, SIGTERM
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import grpc
 from grpc_tools import protoc
@@ -44,8 +44,8 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         """Initialize the plugin."""
         super(Plugin, self).__init__(*args, **kwargs)
-        self.proto_files: List[
-            Tuple[Union[str, Path], Optional[Union[str, Path]], Dict[str, Any]]
+        self.proto_files: list[
+            tuple[Union[str, Path], Optional[Union[str, Path]], dict[str, Any]]
         ] = []
         self.services = []
         self.channel = None
@@ -140,14 +140,14 @@ class Plugin(BasePlugin):
             **(options or self.cfg.default_channel_options),
         )
 
-    def build_proto(  # noqa: PLR0913
+    def build_proto(
         self,
         path: Union[str, Path],
         build_dir: Optional[Union[str, Path]] = None,
         build_package: Optional[Union[str, bool]] = None,
-        targets: Optional[List[Path]] = None,
-        include: Optional[List[Path]] = None,
-    ) -> List[Path]:
+        targets: Optional[list[Path]] = None,
+        include: Optional[list[Path]] = None,
+    ) -> list[Path]:
         """Build the given proto."""
         path = Path(path)
         if not path.exists():
