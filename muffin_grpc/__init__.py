@@ -7,21 +7,21 @@ import logging
 from contextlib import suppress
 from functools import cached_property
 from importlib import import_module
+from importlib.resources import files as package_files
 from pathlib import Path
 from signal import SIGINT, SIGTERM
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import grpc
 from grpc_tools import protoc
 from muffin.plugins import BasePlugin, PluginError
-from pkg_resources import resource_filename
 
 from .utils import _fix_imports, _generate_file, _is_newer, _parse_proto
 
 if TYPE_CHECKING:
     from muffin import Application
 
-INCLUDE = resource_filename("grpc_tools", "_proto")
+INCLUDE = package_files("grpc_tools") / "_proto"
 
 
 class Plugin(BasePlugin):
@@ -44,9 +44,7 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         """Initialize the plugin."""
         super(Plugin, self).__init__(*args, **kwargs)
-        self.proto_files: list[
-            tuple[Union[str, Path], Optional[Union[str, Path]], dict[str, Any]]
-        ] = []
+        self.proto_files: list[tuple[str | Path, str | Path | None, dict[str, Any]]] = []
         self.services = []
         self.channel = None
 
@@ -100,9 +98,7 @@ class Plugin(BasePlugin):
 
         return server
 
-    def add_proto(
-        self, path: Union[str, Path], build_dir: Optional[Union[str, Path]] = None, **params
-    ):
+    def add_proto(self, path: str | Path, build_dir: str | Path | None = None, **params):
         """Register/build the given proto file."""
         path = Path(path).absolute()
         build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
@@ -122,7 +118,7 @@ class Plugin(BasePlugin):
         register = getattr(proto_module, f"add_{ proto_cls.__name__ }_to_server")
         self.services.append((service_cls, register))
 
-    def get_channel(self, address: Optional[str] = None, **options):
+    def get_channel(self, address: str | None = None, **options):
         """Open a channel."""
         address = address or self.cfg.default_channel
         if address is None:
@@ -142,11 +138,12 @@ class Plugin(BasePlugin):
 
     def build_proto(
         self,
-        path: Union[str, Path],
-        build_dir: Optional[Union[str, Path]] = None,
-        build_package: Optional[Union[str, bool]] = None,
-        targets: Optional[list[Path]] = None,
-        include: Optional[list[Path]] = None,
+        path: str | Path,
+        build_dir: str | Path | None = None,
+        *,
+        build_package: str | bool | None = None,
+        targets: list[Path] | None = None,
+        include: list[Path] | None = None,
     ) -> list[Path]:
         """Build the given proto."""
         path = Path(path)
