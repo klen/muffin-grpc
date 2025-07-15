@@ -24,7 +24,7 @@ packages = [{ include = "muffin_grpc" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-muffin = "^0"
+muffin = "*"
 grpcio = "^1"
 grpcio-tools = "^1"
 attrs = "*"

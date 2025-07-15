@@ -573,18 +573,18 @@ tests = ["pytest", "pytest-mypy"]
 
 [[package]]
 name = "muffin"
-version = "0.102.3"
+version = "1.0.2"
 description = "Muffin is a fast, simple and asyncronous web-framework for Python 3 (asyncio, trio, curio)"
 optional = false
-python-versions = "<4.0,>=3.9"
+python-versions = "<4.0,>=3.10"
 groups = ["main", "example"]
 files = [
-    {file = "muffin-0.102.3-py3-none-any.whl", hash = "sha256:d0995ae8a8dbb71de1f729d93010763a7768ce53129bbd3d3316e80705a3d15a"},
-    {file = "muffin-0.102.3.tar.gz", hash = "sha256:a294704fc01f9c0972b11a4750c876ea44097bcadf3895ee709b9da1941dc8bc"},
+    {file = "muffin-1.0.2-py3-none-any.whl", hash = "sha256:be86f0411a5576812f58abebccbd0bfd4b3bbbacf6efa781ed9dccb3c6bbc80b"},
+    {file = "muffin-1.0.2.tar.gz", hash = "sha256:97727490ee8720270aeb92f88f6adc8610bea5f1e80f332619eca25c7bed5734"},
 ]
 
 [package.dependencies]
-asgi-tools = ">=1,<2"
+asgi-tools = ">=1.3.2,<2.0.0"
 modconfig = ">=1,<2"
 ujson = "*"
 
@@ -1534,4 +1534,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "a94b0dea06cc6e17c3d4ab172c6487a13d76f225b683009018ec0a94875c9b3f"
+content-hash = "aa6be8b867113bd8542c56aa7671526ffeb0faefe5d996b04446eed1f99ffa31"
