@@ -25,11 +25,11 @@ Features
 Requirements
 ============
 
-- Python >= 3.8
+- Python >= 3.10
 - `grpcio`
 - `grpcio-tools`
 - `protobuf`
-- `muffin >= 0.50.0`
+- `muffin`
 
 .. note:: This plugin supports only the asyncio event loop (Trio is not supported).
 
