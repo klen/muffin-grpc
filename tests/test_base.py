@@ -2,89 +2,15 @@ import asyncio
 from pathlib import Path
 
 import grpc.aio as grpc_aio
-import pytest
 
-BUILD_DIR = Path("tests/proto/compiled")
+from muffin_grpc import Plugin as GRPC
+
+from .conftest import BUILD_DIR
+
 SRC_DIR = Path("tests/proto/src")
 
 
-@pytest.fixture(scope="session")
-def aiolib():
-    return "asyncio", {"use_uvloop": False}
-
-
-@pytest.fixture(autouse=True)
-async def clean_build():
-    for path in BUILD_DIR.glob("*.py"):
-        path.unlink()
-
-
-@pytest.fixture()
-def app():
-    from muffin import Application
-
-    return Application()
-
-
-async def test_proto_build(app):
-    from muffin_grpc import Plugin as GRPC
-
-    grpc = GRPC(app, autobuild=False, build_dir=BUILD_DIR)
-    grpc.add_proto(SRC_DIR / "helloworld.proto", build_package="helloworld")
-
-    assert not (BUILD_DIR / "helloworld_pb2.py").is_file()
-    assert not (BUILD_DIR / "helloworld_pb2_grpc.py").is_file()
-
-    grpc = GRPC(app, build_dir=BUILD_DIR)
-    grpc.add_proto(SRC_DIR / "helloworld.proto", build_package="helloworld")
-
-    assert (BUILD_DIR / "helloworld_pb2.py").is_file()
-    assert (BUILD_DIR / "helloworld_pb2_grpc.py").is_file()
-
-    content = (BUILD_DIR / "helloworld_pb2_grpc.py").read_text()
-    assert "from . import helloworld_pb2 as helloworld__pb2" in content
-
-    assert grpc.proto_files
-
-    from tests.proto.compiled.helloworld import (  # type: ignore[]
-        GreeterServicer,
-        GreeterStub,
-        HelloReply,
-        HelloRequest,
-    )
-
-    assert HelloReply
-    assert HelloRequest
-    assert GreeterServicer
-    assert GreeterStub
-
-
-async def test_proto_build_with_dependencies(app):
-    from muffin_grpc import Plugin as GRPC
-
-    grpc = GRPC(app, build_dir=BUILD_DIR)
-    grpc.add_proto(SRC_DIR / "weather_rpc.proto")
-
-    assert (BUILD_DIR / "weather.py").is_file()
-    assert (BUILD_DIR / "weather_rpc_pb2.py").is_file()
-    assert (BUILD_DIR / "weather_rpc_pb2_grpc.py").is_file()
-    assert (BUILD_DIR / "weather_pb2.py").is_file()
-
-    from tests.proto.compiled.weather import (  # type: ignore[]
-        Temperature,
-        WeatherRequest,
-        WeatherResponse,
-        WeatherService,
-    )
-
-    assert WeatherRequest
-    assert WeatherResponse
-    assert WeatherService
-    assert Temperature
-
-
 async def test_add_to_server(app):
-    from muffin_grpc import Plugin as GRPC
 
     grpc = GRPC(
         app,
@@ -92,7 +18,7 @@ async def test_add_to_server(app):
         server_listen="[::]:4242",
         default_channel="localhost:4242",
     )
-    grpc.add_proto(BUILD_DIR / "src/helloworld.proto")
+    grpc.add_proto(SRC_DIR / "helloworld.proto")
 
     from tests.proto.compiled.helloworld import (  # type: ignore[]
         GreeterServicer,

@@ -1,77 +1,71 @@
 Muffin-GRPC
 ############
 
-.. _description:
-
-Muffin-GRPC -- GRPC support for Muffin_ framework.
-
-Features:
-
-- Automatically build proto files and python helpers for them;
-- Automatically connect to default channel;
-- Automatically create and run GRPC server from your services;
-
-.. _badges:
-
 .. image:: https://github.com/klen/muffin-grpc/workflows/tests/badge.svg
     :target: https://github.com/klen/muffin-grpc/actions
     :alt: Tests Status
 
 .. image:: https://img.shields.io/pypi/v/muffin-grpc
     :target: https://pypi.org/project/muffin-grpc/
-    :alt: PYPI Version
+    :alt: PyPI Version
 
-.. _contents:
+**Muffin-GRPC** is a plugin for the Muffin_ framework that brings gRPC support to your application.
 
 .. contents::
 
-.. _requirements:
+Features
+========
+
+- 📦 Automatically compiles `.proto` files to Python
+- ⚙️ Simplified gRPC server and client integration
+- 🔁 CLI commands to manage proto compilation and server lifecycle
+- 🧩 Automatically handles proto dependencies and import fixes
+- 🧪 Designed with asyncio and modern Python standards
 
 Requirements
-=============
+============
 
-- python >= 3.8
+- Python >= 3.8
+- `grpcio`
+- `grpcio-tools`
+- `protobuf`
+- `muffin >= 0.50.0`
 
-.. note:: The plugin supports only asyncio evenloop (not trio)
-
-.. _installation:
+.. note:: This plugin supports only the asyncio event loop (Trio is not supported).
 
 Installation
-=============
+============
 
-**Muffin-GRPC** should be installed using pip: ::
+Install via pip:
+
+.. code-block:: shell
 
     pip install muffin-grpc
-
-.. _usage:
 
 Usage
 =====
 
-Setup the plugin and connect it into your app:
+Set up the plugin and attach it to your Muffin application:
 
 .. code-block:: python
 
     from muffin import Application
     from muffin_grpc import Plugin as GRPC
 
-    # Create Muffin Application
-    app = Application('example')
-
-    # Initialize the plugin
-    # As alternative: grpc = GRPC(app, **options)
-    grpc = GRPC(default_channel='server:50051')
+    app = Application("example")
+    grpc = GRPC(default_channel="localhost:50051")
     grpc.setup(app)
 
+Create a `helloworld.proto`:
 
-Lets build a simple helloworld service, with the proto: ::
+.. code-block:: proto
 
     syntax = "proto3";
 
     package helloworld;
 
     service Greeter {
-        rpc SayHello (HelloRequest) returns (HelloReply) {}
+        rpc SayHello (HelloRequest) returns (HelloReply);
     }
 
     message HelloRequest {
@@ -82,162 +76,131 @@ Lets build a simple helloworld service, with the proto: ::
         string message = 1;
     }
 
-Put it somewhere and add the file into the grpc plugin:
+Register the file:
 
 .. code-block:: python
 
-   grpc.add_proto('project_name/proto/helloworld.proto')
+    grpc.add_proto("project_name/proto/helloworld.proto")
 
-
-Run the command to build proto files:
+Compile proto files:
 
 .. code-block:: shell
 
-   $ muffin project_name grpc_build
+    muffin project_name grpc_build
 
-The command will build the files:
+This generates:
 
-- ``project_name/proto/helloworld_pb2.py`` - with the proto's messages
-- ``project_name/proto/helloworld_pb2_grpc.py`` - with the proto's GRPC services
-- ``project_name/proto/helloworld.py`` - with the messages and services together
-- ``project_name/proto/__init__.py`` - to make the build directory a package
+- `helloworld_pb2.py` — messages
+- `helloworld_pb2_grpc.py` — gRPC services
+- `helloworld.py` — bundled import helper
+- `__init__.py` — so the folder is importable
 
-.. note:: Muffin-GRPC fixes python imports automatically
+.. note:: Muffin-GRPC automatically fixes Python imports.
 
-Let's implement the Greeter service:
+Now implement the Greeter service:
 
 .. code-block:: python
 
-    from .proto.helloworld import GreeterServicer, HelloRequest, HelloReply
+    from .proto.helloworld import GreeterServicer, HelloReply, HelloRequest
+    import grpc.aio as grpc_aio
 
-    # Connect the service to GRPC server
     @grpc.add_to_server
     class Greeter(GreeterServicer):
 
-        async def SayHello(self, request: HelloRequest,
-                        context: grpc_aio.ServicerContext) -> HelloReply:
-            return HelloReply(message='Hello, %s!' % request.name)
+        async def SayHello(
+            self, request: HelloRequest, context: grpc_aio.ServicerContext
+        ) -> HelloReply:
+            return HelloReply(message=f"Hello, {request.name}!")
 
-
-Run the server with the command:
+Run the gRPC server:
 
 .. code-block:: shell
 
-   $ muffin package_name grpc_server
+    muffin project_name grpc_server
 
-The server is working and accepts GRPC request, let's start building a client
+Client example:
 
 .. code-block:: python
 
     from .proto.helloworld import GreeterStub, HelloRequest
+    from aiohttp.web import Application, Response
 
-    @app.route('/')
+    @app.route("/")
     async def index(request):
-        name = request.url.query.get('name') or 'anonymous'
+        name = request.url.query.get("name", "anonymous")
         try:
             async with grpc.get_channel() as channel:
                 stub = GreeterStub(channel)
-                response = await stub.SayHello(
-                    HelloRequest(name=request.url.query['name']), timeout=10)
-                message = response.message
+                response = await stub.SayHello(HelloRequest(name=name), timeout=10)
+                return Response(text=response.message)
 
-        except AioRpcError as exc:
-            message = exc.details()
+        except grpc_aio.AioRpcError as exc:
+            return Response(text=exc.details())
 
-        return message
+Configuration
+=============
 
-The ``/`` endpoint will make a request to the GRPC server and return a message
-from the server.
+You can configure the plugin either via `setup()` or using `GRPC_` prefixed settings in the Muffin app config.
 
+**Available options:**
 
-Configuration options
-----------------------
+=========================== ================================ =========================================
+Name                        Default value                    Description
+=========================== ================================ =========================================
+**build_dir**               `None`                           Directory to store compiled files
+**server_listen**           `"[::]:50051"`                   gRPC server address
+**ssl_server**              `False`                          Enable SSL for server
+**ssl_server_params**       `None`                           Tuple of credentials for SSL server
+**ssl_client**              `False`                          Enable SSL for client
+**ssl_client_params**       `None`                           Tuple of credentials for SSL client
+**default_channel**         `"localhost:50051"`              Default gRPC client target
+**default_channel_options** `{}`                             Additional gRPC options
+=========================== ================================ =========================================
 
-=========================== ======================================= ===========================
-Name                        Default value                           Desctiption
---------------------------- --------------------------------------- ---------------------------
-**build_dir**               ``None``                                A directory to build proto files
-**server_listen**           ``"[::]:50051"``                        Server address
-**ssl_server**              ``False``                               Enable SSL for server
-**ssl_server_params**       ``None``                                SSL Server Params
-**ssl_client**              ``False``                               Enable SSL for client
-**ssl_client_params**       ``None``                                SSL Client Params
-**default_channel**         ``localhost:50051``                     Default Client Channel Address
-**default_channel_options** ``{}``                                  GRPC options for the default channel
-=========================== ======================================= ===========================
-
-You are able to provide the options when you are initiliazing the plugin:
+Via `setup()`:
 
 .. code-block:: python
 
-    grpc.setup(app, server_listen='localhost:40000')
+    grpc.setup(app, server_listen="localhost:40000")
 
-Or setup it from ``Muffin.Application`` configuration using the ``GRPC_`` prefix:
+Or from config:
 
 .. code-block:: python
 
-   GRPC_SERVER_LISTERN = 'locahost:40000'
-
-``Muffin.Application`` configuration options are case insensitive
+    GRPC_SERVER_LISTEN = "localhost:40000"
 
 CLI Commands
-------------
+============
 
-::
+Build registered proto files:
 
-    $ muffin project_name grpc_build --help
+.. code-block:: shell
 
-    usage: muffin grpc_build [-h]
+    muffin project_name grpc_build
 
-    Build registered proto files.
+Start the gRPC server:
 
-    optional arguments:
-    -h, --help  show this help message and exit
+.. code-block:: shell
 
-::
-
-    $ muffin project_name grpc_server --help
-
-    usage: muffin grpc_server [-h]
-
-    Start GRPC server with the registered endpoints.
-
-    optional arguments:
-    -h, --help  show this help message and exit
+    muffin project_name grpc_server
 
 
-.. _bugtracker:
-
-Bug tracker
+Bug Tracker
 ===========
 
-If you have any suggestions, bug reports or
-annoyances please report them to the issue tracker
-at https://github.com/klen/muffin-grpc/issues
-
-.. _contributing:
+Found a bug or have a suggestion?
+Submit an issue here: https://github.com/klen/muffin-grpc/issues
 
 Contributing
 ============
 
-Development of Muffin-GRPC happens at: https://github.com/klen/muffin-grpc
-
-
-Contributors
-=============
-
-* klen_ (Kirill Klenov)
-
-.. _license:
+Want to contribute? Pull requests are welcome!
+Development happens at: https://github.com/klen/muffin-grpc
 
 License
-========
+=======
 
-Licensed under a `MIT license`_.
+Licensed under the `MIT license`_.
 
-.. _links:
-
-
-.. _klen: https://github.com/klen
 .. _Muffin: https://github.com/klen/muffin
 .. _MIT license: http://opensource.org/licenses/MIT
