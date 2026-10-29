@@ -65,7 +65,7 @@ project-excludes = ["tests", "example", "pyproject.toml"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py311,py312,py313,py314,py315,pypy311
+envlist = py311,py312,py313,py314,py315
 
 [testenv]
 allowlist_externals = uv,pytest
