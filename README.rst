@@ -343,8 +343,8 @@ Start the gRPC server:
 
     muffin project_name grpc-server
 
-``grpc-server`` binds ``server_listen``, starts the server, waits for ``SIGINT``/``SIGTERM`` and then
-stops it with a 2 second grace period. Since services are registered on the plugin before the server
+``grpc-server`` starts the cached server (with the services and the SSL configuration above), waits
+for ``SIGINT``/``SIGTERM`` and then stops it with a 2 second grace period. Since services are registered on the plugin before the server
 is started, the command must run in the same process that imported your application module.
 
 Limitations
