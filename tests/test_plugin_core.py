@@ -5,10 +5,11 @@ from muffin import Application
 from muffin_grpc import Plugin, PluginError
 
 
-def test_get_channel_default(app: Application):
+async def test_get_channel_default(app: Application):
     grpc_plugin = Plugin(app, default_channel="localhost:5555")
     channel = grpc_plugin.get_channel()
     assert isinstance(channel, grpc.aio.Channel)
+    await channel.close()
 
 
 def test_get_channel_missing(app: Application):
@@ -18,7 +19,7 @@ def test_get_channel_missing(app: Application):
         grpc_plugin.get_channel()
 
 
-def test_server_generation_insecure(app: Application):
+async def test_server_generation_insecure(app: Application):
     grpc_plugin = Plugin(app, server_listen="[::]:4444")
     grpc_plugin.services = []
 
