@@ -52,6 +52,13 @@ def test_add_proto_autobuild(app):
     assert GreeterStub
 
 
+def test_add_proto_creates_missing_build_dir(app, tmp_path):
+    grpc = GRPC(app, build_dir=tmp_path / "build" / "proto")
+    grpc.add_proto(SRC_DIR / "helloworld.proto")
+
+    assert (tmp_path / "build" / "proto" / "helloworld_pb2.py").exists()
+
+
 def test_proto_build_with_imports(app):
     grpc = GRPC(app, build_dir=BUILD_DIR)
     grpc.add_proto(SRC_DIR / "weather_rpc.proto")

@@ -57,7 +57,6 @@ class Plugin(BasePlugin):
         async def grpc_server():
             """Start GRPC server with the registered endpoints."""
             self.logger.warning("Start GRPC Server")
-            self.server.add_insecure_port(self.cfg.server_listen)
             await self.server.start()
             loop = asyncio.get_event_loop()
             stop = asyncio.Event()
@@ -103,6 +102,8 @@ class Plugin(BasePlugin):
     def add_proto(self, path: str | Path, build_dir: str | Path | None = None, **params):
         """Register/build the given proto file."""
         path = Path(path).absolute()
+        if not path.exists():
+            self.logger.warning("Proto not found: %s", path)
         build_dir = Path(build_dir or self.cfg.build_dir or path.parent)
         self.proto_files.append(
             (path, build_dir, params),
@@ -115,10 +116,14 @@ class Plugin(BasePlugin):
 
     def add_to_server(self, service_cls):
         """Register the given service class to the server."""
-        proto_cls = service_cls.mro()[-2]
-        proto_module = import_module(proto_cls.__module__)
-        register = getattr(proto_module, f"add_{proto_cls.__name__}_to_server")
-        self.services.append((service_cls, register))
+        for proto_cls in service_cls.mro()[1:-1]:
+            proto_module = import_module(proto_cls.__module__)
+            register = getattr(proto_module, f"add_{proto_cls.__name__}_to_server", None)
+            if register:
+                self.services.append((service_cls, register))
+                return
+
+        raise PluginError(f"No generated servicer found for {service_cls!r}")
 
     def get_channel(self, address: str | None = None, **options):
         """Open a channel."""
@@ -154,8 +159,7 @@ class Plugin(BasePlugin):
 
         proto_updated = path.stat().st_ctime
         build_dir = Path(build_dir or path.parent)
-        if not build_dir.exists():
-            build_dir.mkdir()
+        build_dir.mkdir(parents=True, exist_ok=True)
 
         data = _parse_proto(path)
         packages = data.get("Package")
