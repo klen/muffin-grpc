@@ -12,7 +12,7 @@ async def index(request):
     # Ask helloworld service
     if 'name' in request.url.query:
         try:
-            async with grpc.channel() as channel:
+            async with grpc.get_channel() as channel:
                 stub = GreeterStub(channel)
                 response = await stub.SayHello(
                     HelloRequest(name=request.url.query['name']), timeout=10)

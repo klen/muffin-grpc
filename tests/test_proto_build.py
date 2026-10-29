@@ -9,7 +9,20 @@ def test_add_proto_registers_file(app):
 
     # Files should not be generated
     assert not any(t.exists() for t in targets)
+    assert targets == [BUILD_DIR / "helloworld_pb2.py"]
     assert len(grpc.proto_files) == 1
+
+
+def test_build_proto_is_incremental(app):
+    grpc = GRPC(app, build_dir=BUILD_DIR)
+    grpc.add_proto(SRC_DIR / "helloworld.proto", build_package="helloworld")
+    target = BUILD_DIR / "helloworld_pb2.py"
+    mtime = target.stat().st_mtime
+
+    grpc.build_proto(SRC_DIR / "helloworld.proto", build_dir=BUILD_DIR, build_package="helloworld")
+
+    # Up to date targets are not regenerated
+    assert target.stat().st_mtime == mtime
 
 
 def test_add_proto_autobuild(app):

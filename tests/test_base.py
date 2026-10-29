@@ -32,7 +32,7 @@ async def test_add_to_server(app):
         async def SayHello(
             self, request: HelloRequest, context: grpc_aio.ServicerContext
         ) -> HelloReply:
-            return HelloReply(message=f"Hello, { request.name.title() }!")
+            return HelloReply(message=f"Hello, {request.name.title()}!")
 
     assert grpc.services
     assert grpc.server

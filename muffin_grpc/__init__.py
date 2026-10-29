@@ -28,7 +28,7 @@ class Plugin(BasePlugin):
     """Start server, register endpoints, connect to channels."""
 
     name = "grpc"
-    defaults = {  # noqa: RUF012
+    defaults = {
         "autobuild": True,
         "build_dir": None,
         "default_channel": "localhost:50051",
@@ -48,9 +48,9 @@ class Plugin(BasePlugin):
         self.services = []
         self.channel = None
 
-    def setup(self, app: "Application", **options):
+    def setup(self, app: "Application", *, name: str | None = None, **options) -> bool:
         """Setup grpc commands."""
-        super(Plugin, self).setup(app, **options)
+        initialized = super(Plugin, self).setup(app, name=name, **options)
         self.logger = app.logger
 
         @app.manage(lifespan=True)
@@ -72,6 +72,8 @@ class Plugin(BasePlugin):
             for path, build_dir, params in self.proto_files:
                 self.logger.warning("Build: %s", path)
                 self.build_proto(path, build_dir=build_dir, **params)
+
+        return initialized
 
     async def startup(self):
         with suppress(PluginError):
@@ -109,13 +111,13 @@ class Plugin(BasePlugin):
             return self.build_proto(path, build_dir=build_dir, **params)
 
         else:
-            return [build_dir / f"{ path.stem }_pb2.py"]
+            return [build_dir / f"{path.stem}_pb2.py"]
 
     def add_to_server(self, service_cls):
         """Register the given service class to the server."""
         proto_cls = service_cls.mro()[-2]
         proto_module = import_module(proto_cls.__module__)
-        register = getattr(proto_module, f"add_{ proto_cls.__name__ }_to_server")
+        register = getattr(proto_module, f"add_{proto_cls.__name__}_to_server")
         self.services.append((service_cls, register))
 
     def get_channel(self, address: str | None = None, **options):
@@ -172,17 +174,17 @@ class Plugin(BasePlugin):
         ]
 
         args = []
-        target_pb2 = build_dir / f"{ path.stem }_pb2.py"
+        target_pb2 = build_dir / f"{path.stem}_pb2.py"
         targets.append(target_pb2)
         if not _is_newer(target_pb2, proto_updated):
-            args.append(f"--python_out={ build_dir }")
+            args.append(f"--python_out={build_dir}")
 
         services = data.get("Service")
         if services:
-            target_grpc = build_dir / f"{ path.stem }_pb2_grpc.py"
+            target_grpc = build_dir / f"{path.stem}_pb2_grpc.py"
             targets.append(target_grpc)
             if not _is_newer(target_grpc, proto_updated):
-                args.append(f"--grpc_python_out={ build_dir }")
+                args.append(f"--grpc_python_out={build_dir}")
 
         if args:
             self.logger.info("Build %r", path)
@@ -191,9 +193,9 @@ class Plugin(BasePlugin):
 
             args = [
                 "grpc_tools.protoc",
-                f"--proto_path={ path.parent }",
-                f"--proto_path={ INCLUDE }",
-                *([f"--proto_path={ include }" for include in include or []]),
+                f"--proto_path={path.parent}",
+                f"--proto_path={INCLUDE}",
+                *([f"--proto_path={include}" for include in include or []]),
                 *args,
                 str(path),
             ]
@@ -206,7 +208,7 @@ class Plugin(BasePlugin):
 
             if build_package:
                 _generate_file(
-                    build_dir / f"{ build_package }.py",
+                    build_dir / f"{build_package}.py",
                     *[f"from .{target.stem} import *" for target in targets],
                 )
 

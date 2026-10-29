@@ -9,11 +9,11 @@ BUILD_DIR = Path("tests/proto/compiled")
 
 @pytest.fixture(scope="session")
 def aiolib():
-    return "asyncio", {"use_uvloop": False}
+    return "asyncio"
 
 
 @pytest.fixture(autouse=True)
-async def clean_build():
+def clean_build():
     if BUILD_DIR.exists():
         for path in BUILD_DIR.glob("**/*"):
             if path.is_file() and path.suffix in {".py", ".pyc"}:

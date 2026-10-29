@@ -1,64 +1,116 @@
+PACKAGE = muffin_grpc
 VIRTUAL_ENV ?= .venv
+
+all: $(VIRTUAL_ENV)
+
+.PHONY: help
+# target: help - Display callable targets
+help:
+	@egrep "^# target:" [Mm]akefile
+
+.PHONY: clean
+# target: clean - Remove build artifacts
+clean:
+	rm -rf build/ dist/ *.egg-info
+	find $(CURDIR) -name "*.py[co]" -delete
+	find $(CURDIR) -name "*.orig" -delete
+	find $(CURDIR)/$(PACKAGE) -name "__pycache__" | xargs rm -rf
 
 # =============
 #  Development
 # =============
 
-$(VIRTUAL_ENV): poetry.lock .pre-commit-config.yaml
-	@[ -d $(VIRTUAL_ENV) ] || python -m venv $(VIRTUAL_ENV)
-	@poetry install --with tests,dev
-	@poetry run pre-commit install
-	@poetry self add poetry-bumpversion
+$(VIRTUAL_ENV): pyproject.toml .pre-commit-config.yaml
+	@uv sync
+	@uv run pre-commit install
 	@touch $(VIRTUAL_ENV)
 
-.PHONY: test t
+.PHONY: t test
 # target: test - Runs tests
-test t: $(VIRTUAL_ENV)
-	@poetry run pytest tests
+t test: $(VIRTUAL_ENV)
+	@echo 'Run tests...'
+	@uv run pytest tests
 
-.PHONY: mypy
-mypy: $(VIRTUAL_ENV)
-	@poetry run mypy muffin_grpc
+.PHONY: types
+# target: types - Check typing
+types: $(VIRTUAL_ENV)
+	@echo 'Checking typing...'
+	@uv run pyrefly check
 
-.PHONY: example
-example: build $(VIRTUAL_ENV)
-	@poetry run uvicorn --reload example:app
+.PHONY: lint
+# target: lint - Check code
+lint: $(VIRTUAL_ENV)
+	@make types
+	@uv run ruff check
 
-.PHONY: example-grpc
-example-grpc: $(VIRTUAL_ENV)
-	@poetry run muffin example:app --aiolib=asyncio grpc_server --build-proto
+outdated:
+	@echo "Checking for outdated dependencies..."
+	@uv tree --depth 1 --outdated | grep 'latest' || echo "All dependencies are up to date."
 
 .PHONY: build
-build: $(VIRTUAL_ENV) clean
-	@poetry run muffin example:app grpc_build
+# target: build - Compile the example proto files
+build: $(VIRTUAL_ENV)
+	@uv run muffin example:app grpc-build
+
+.PHONY: example
+# target: example - Run the example application
+example: $(VIRTUAL_ENV)
+	@echo 'Run example...'
+	@uv run uvicorn example:app --reload --port=5000
+
+.PHONY: example-grpc
+# target: example-grpc - Run the example gRPC server
+example-grpc: $(VIRTUAL_ENV)
+	@uv run muffin example:app --aiolib=asyncio grpc_server
 
 # ==============
 #  Bump version
 # ==============
 
+RELEASE	?= minor
+MANAGER	?= uv
+
 .PHONY: release
-VPART ?= minor
 # target: release - Bump version
-release: $(VIRTUAL_ENV)
-	git checkout develop
-	git pull
-	git checkout master
-	git merge develop
-	git pull
-	@poetry version $(VPART)
-	git commit -am "build(release): `poetry version -s`"
-	git tag `poetry version -s`
-	git checkout develop
-	git merge master
-	git push --tags origin develop master
+release:
+	@echo "Starting release process (bumping $(RELEASE) version)..."
+	@git checkout master
+	@git pull
+	@git checkout develop
+	@git pull
+	@echo "Bumping version and creating release commit and tag..."
+	@uvx bump-my-version bump $(RELEASE)
+	@echo "Version bumped to `$(MANAGER) version --short`."
+	@$(MANAGER) lock
+	@echo "Committing version bump and creating tag..."
+	@VERSION=`$(MANAGER) version --short`; \
+		{ \
+			printf 'build(release): %s\n\n' "$$VERSION"; \
+			printf 'Changes:\n\n'; \
+			git log --oneline --pretty=format:'%s [%an]' master..develop | grep -Evi 'github|^Merge' || true; \
+		} | git commit -a -F -
+	@echo "Merging changes between branches..."
+	@git checkout master
+	@git merge --ff-only develop
+	@VERSION=`$(MANAGER) version --short`; \
+		git push origin master; \
+		git tag -a "$$VERSION" -m "$$VERSION"; \
+		git push origin "$$VERSION"
+	@git checkout develop
+	@git merge --ff-only master
+	@git push origin develop
+	@echo "Release process complete for `$(MANAGER) version --short`"
 
 .PHONY: minor
 minor: release
 
 .PHONY: patch
 patch:
-	make release VPART=patch
+	make release RELEASE=patch
 
 .PHONY: major
 major:
-	make release VPART=major
+	make release RELEASE=major
+
+version v:
+	uv version --short
