@@ -48,10 +48,9 @@ class Plugin(BasePlugin):
         self.services = []
         self.channel = None
 
-    # pyrefly: ignore[bad-override]
-    def setup(self, app: "Application", **options):
+    def setup(self, app: "Application", *, name: str | None = None, **options) -> bool:
         """Setup grpc commands."""
-        super(Plugin, self).setup(app, **options)
+        initialized = super(Plugin, self).setup(app, name=name, **options)
         self.logger = app.logger
 
         @app.manage(lifespan=True)
@@ -73,6 +72,8 @@ class Plugin(BasePlugin):
             for path, build_dir, params in self.proto_files:
                 self.logger.warning("Build: %s", path)
                 self.build_proto(path, build_dir=build_dir, **params)
+
+        return initialized
 
     async def startup(self):
         with suppress(PluginError):
