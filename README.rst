@@ -186,10 +186,12 @@ Everything is written to ``build_dir`` (flat, next to each other):
 Incremental builds
 ------------------
 
-``build_proto`` compares the modification time of the proto with the change time (``ctime``) of the
-target file (``_is_newer``). Targets that are up to date are not regenerated, and when every target
-is up to date nothing is written at all — not even ``__init__.py`` or the aggregator. So the
-timestamps of generated files only change when the proto (or a proto it imports) changes.
+``build_proto`` compares the change time (``ctime``) of the proto with the ``ctime`` of the target file
+(``_is_newer``). Targets that are newer are not regenerated, and when every target is up to date
+nothing is written at all — not even ``__init__.py`` or the aggregator. So generated files are only
+rewritten when the proto (or a proto it imports) changed. Note that ``ctime`` is the metadata change
+time, so e.g. a ``chmod`` on the proto also triggers a rebuild, while a copied file with preserved
+timestamps still gets a fresh ``ctime``.
 
 Proto dependencies
 ------------------
@@ -242,6 +244,8 @@ start, including production, which costs the compile time and needs a writable b
 For production it is better to compile once, before deploying, and to disable the runtime build:
 
 .. code-block:: python
+
+    from pathlib import Path
 
     grpc = GRPC(app, build_dir=Path("build/proto"), autobuild=False)
     grpc.add_proto("protos/api.proto")
