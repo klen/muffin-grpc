@@ -40,6 +40,7 @@ dev = [
   "pyrefly",
   "pre-commit",
   "tox",
+  "types-grpcio>=1.85.0.20261028",
 ]
 example = ["uvicorn", "muffin-jinja2"]
 

@@ -16,7 +16,7 @@ def aiolib():
 def clean_build():
     if BUILD_DIR.exists():
         for path in BUILD_DIR.glob("**/*"):
-            if path.is_file() and path.suffix in {".py", ".pyc"}:
+            if path.is_file() and path.suffix in {".py", ".pyc", ".pyi"}:
                 path.unlink()
             if path.name == "__pycache__":
                 shutil.rmtree(path)

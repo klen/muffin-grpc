@@ -81,3 +81,12 @@ def test_proto_build_with_imports(app):
     assert WeatherResponse
     assert WeatherService
     assert Temperature
+
+
+def test_build_proto_generates_stubs(app):
+    grpc = GRPC(app, build_dir=BUILD_DIR)
+    grpc.add_proto(SRC_DIR / "weather_rpc.proto")
+
+    # The .pyi is what type checkers read: the .py builds its messages at runtime
+    assert (BUILD_DIR / "weather_rpc_pb2.pyi").is_file()
+    assert "WeatherRequest" in (BUILD_DIR / "weather_pb2.pyi").read_text()

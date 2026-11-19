@@ -10,7 +10,7 @@ from importlib import import_module
 from importlib.resources import files as package_files
 from pathlib import Path
 from signal import SIGINT, SIGTERM
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import grpc
 from grpc_tools import protoc
@@ -19,7 +19,10 @@ from muffin.plugins import BasePlugin, PluginError
 from .utils import _fix_imports, _generate_file, _is_newer, _parse_proto
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from muffin import Application
+    from proto_schema_parser.ast import Import, Package, Service
 
 INCLUDE = package_files("grpc_tools") / "_proto"
 
@@ -41,14 +44,14 @@ class Plugin(BasePlugin):
     }
     logger = logging.getLogger("muffin-grpc")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the plugin."""
-        super(Plugin, self).__init__(*args, **kwargs)
-        self.proto_files: list[tuple[str | Path, str | Path | None, dict[str, Any]]] = []
-        self.services = []
-        self.channel = None
+        super().__init__(*args, **kwargs)
+        self.proto_files: list[tuple[Path, Path, dict[str, Any]]] = []
+        self.services: list[tuple[type, Callable[[Any, grpc.aio.Server], None]]] = []
+        self.channel: grpc.aio.Channel | None = None
 
-    def setup(self, app: "Application", *, name: str | None = None, **options) -> bool:
+    def setup(self, app: "Application", *, name: str | None = None, **options: Any) -> bool:
         """Setup grpc commands."""
         initialized = super(Plugin, self).setup(app, name=name, **options)
         self.logger = app.logger
@@ -74,11 +77,11 @@ class Plugin(BasePlugin):
 
         return initialized
 
-    async def startup(self):
+    async def startup(self) -> None:
         with suppress(PluginError):
             self.channel = self.get_channel()
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         if self.channel is not None:
             await self.channel.close()
 
@@ -99,7 +102,12 @@ class Plugin(BasePlugin):
 
         return server
 
-    def add_proto(self, path: str | Path, build_dir: str | Path | None = None, **params):
+    def add_proto(
+        self,
+        path: str | Path,
+        build_dir: str | Path | None = None,
+        **params: Any,
+    ) -> list[Path]:
         """Register/build the given proto file."""
         path = Path(path).absolute()
         if not path.exists():
@@ -114,7 +122,7 @@ class Plugin(BasePlugin):
         else:
             return [build_dir / f"{path.stem}_pb2.py"]
 
-    def add_to_server(self, service_cls):
+    def add_to_server(self, service_cls: type) -> None:
         """Register the given service class to the server."""
         for proto_cls in service_cls.mro()[1:-1]:
             proto_module = import_module(proto_cls.__module__)
@@ -125,7 +133,7 @@ class Plugin(BasePlugin):
 
         raise PluginError(f"No generated servicer found for {service_cls!r}")
 
-    def get_channel(self, address: str | None = None, **options):
+    def get_channel(self, address: str | None = None, **options: Any) -> grpc.aio.Channel:
         """Open a channel."""
         address = address or self.cfg.default_channel
         if address is None:
@@ -162,12 +170,12 @@ class Plugin(BasePlugin):
         build_dir.mkdir(parents=True, exist_ok=True)
 
         data = _parse_proto(path)
-        packages = data.get("Package")
+        packages = cast("list[Package]", data.get("Package"))
         if build_package is None and packages:
-            build_package = data["Package"][-1].name
+            build_package = packages[-1].name
 
         targets = targets or []
-        imports = data.get("Import", [])
+        imports = cast("list[Import]", data.get("Import", []))
         targets = targets + [
             target
             for imp in imports
@@ -178,12 +186,17 @@ class Plugin(BasePlugin):
         ]
 
         args = []
+        stubs: list[Path] = []
         target_pb2 = build_dir / f"{path.stem}_pb2.py"
+        target_pyi = build_dir / f"{path.stem}_pb2.pyi"
         targets.append(target_pb2)
-        if not _is_newer(target_pb2, proto_updated):
+        # The .pyi is what type checkers read: the generated .py builds its messages at runtime
+        if not _is_newer(target_pb2, proto_updated) or not target_pyi.is_file():
             args.append(f"--python_out={build_dir}")
+            args.append(f"--pyi_out={build_dir}")
+            stubs.append(target_pyi)
 
-        services = data.get("Service")
+        services = cast("list[Service]", data.get("Service"))
         if services:
             target_grpc = build_dir / f"{path.stem}_pb2_grpc.py"
             targets.append(target_grpc)
@@ -208,7 +221,7 @@ class Plugin(BasePlugin):
                 raise PluginError("{} failed".format(" ".join(args)))
 
             # Fix imports
-            _fix_imports(*targets)
+            _fix_imports(*targets, *stubs)
 
             if build_package:
                 _generate_file(

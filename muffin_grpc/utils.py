@@ -5,19 +5,21 @@ from __future__ import annotations
 import re
 import time
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING
 
 from proto_schema_parser.parser import Parser
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from proto_schema_parser.ast import FileElement
+
 RE_PROTO_COMMENT = re.compile(r"//.*?\n+", re.DOTALL)
 RE_IMPORT_PB2 = re.compile(r"^import (\S+)_pb2", re.MULTILINE)
 
 
-def _parse_proto(proto: Path) -> Dict[str, list[Any]]:
-    data = defaultdict(list)
+def _parse_proto(proto: Path) -> dict[str, list[FileElement]]:
+    data: dict[str, list[FileElement]] = defaultdict(list)
     for st in Parser().parse(proto.read_text()).file_elements:
         data[type(st).__name__].append(st)
 
@@ -28,7 +30,7 @@ def _is_newer(target: Path, ts: float) -> bool:
     return target.is_file() and target.stat().st_ctime > ts
 
 
-def _write_text(target: Path, text: str):
+def _write_text(target: Path, text: str) -> None:
     # Write through a temp file: a crash mid-write must not leave a corrupt target,
     # a newer target would be skipped by _is_newer forever
     tmp = target.with_suffix(f"{target.suffix}.tmp")
@@ -36,12 +38,12 @@ def _write_text(target: Path, text: str):
     tmp.replace(target)
 
 
-def _fix_imports(*targets: Path):
+def _fix_imports(*targets: Path) -> None:
     for target in targets:
         _write_text(target, RE_IMPORT_PB2.sub(r"from . import \1_pb2", target.read_text()))
 
 
-def _generate_file(target: Path, *lines: Union[str, bool]):
+def _generate_file(target: Path, *lines: str | bool) -> None:
     timestamp = time.time()
     _write_text(
         target,
